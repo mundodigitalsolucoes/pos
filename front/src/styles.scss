@@ -13,15 +13,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Warm, appetite-friendly palette */
-  --color-bg: #FAF9F7;
+  /* MDS brand palette */
+  --color-bg: #F7F8FC;
   --color-surface: #FFFFFF;
-  --color-primary: #D35233;
-  --color-primary-hover: #B8432A;
-  --color-primary-light: rgba(211, 82, 51, 0.1);
-  --color-text: #1C1917;
-  --color-text-muted: #78716C;
-  --color-border: #E7E5E4;
+  --color-primary: #374B89;
+  --color-primary-hover: #2F3453;
+  --color-primary-light: rgba(55, 75, 137, 0.12);
+  --color-text: #2F3453;
+  --color-text-muted: #6F7895;
+  --color-border: #D9DDEA;
   --color-success: #16A34A;
   --color-success-light: rgba(22, 163, 74, 0.1);
   --color-warning: #F59E0B;
@@ -31,9 +31,9 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(47, 52, 83, 0.05);
+  --shadow-md: 0 4px 12px rgba(47, 52, 83, 0.08);
+  --shadow-lg: 0 12px 32px rgba(47, 52, 83, 0.14);
 
   /* Radius */
   --radius-sm: 6px;
@@ -98,24 +98,20 @@ select {
 // RESPONSIVE UTILITY CLASSES
 // ============================================
 
-// Prevent horizontal overflow on page/containers
 .overflow-hidden {
   overflow-x: hidden;
 }
 
-// Responsive table wrapper - enables horizontal scroll for tables
 .table-responsive {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 
-  // Ensure minimum touch target and visual feedback
   &::-webkit-scrollbar {
     height: 6px;
   }
 }
 
-// Visibility utilities
 .hide-phone {
   @include for-phone-only {
     display: none !important;
@@ -158,7 +154,6 @@ select {
   }
 }
 
-// Responsive grid utilities
 .grid-responsive {
   display: grid;
   grid-template-columns: 1fr;
@@ -187,7 +182,6 @@ select {
   }
 }
 
-// Stack elements on mobile
 .stack-mobile {
   @include for-phone-only {
     flex-direction: column !important;
@@ -195,15 +189,11 @@ select {
   }
 }
 
-// Text truncation utility
 .text-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-// Note: .card, .btn, .btn-primary, .btn-secondary, .btn-ghost, and .form-group
-// are now defined in the shared modules (_cards.scss, _buttons.scss, _forms.scss)
 
 .error-msg {
   color: var(--color-error);
@@ -211,7 +201,6 @@ select {
   font-size: 0.875rem;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -230,7 +219,6 @@ select {
   }
 }
 
-/* Guest feedback: print only the QR block (see GuestFeedbackComponent.printFeedbackQr) */
 @media print {
   body.print-feedback-qr-only {
     .layout > .sidebar,
