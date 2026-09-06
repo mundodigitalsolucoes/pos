@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
 export const SUPPORTED_LANGUAGES = [
+  { code: 'pt-BR', label: 'Português (Brasil)', locale: 'pt-BR' },
   { code: 'en', label: 'English', locale: 'en-US' },
   { code: 'es', label: 'Español', locale: 'es-ES' },
   { code: 'fr', label: 'Français', locale: 'fr-FR' },
@@ -16,7 +17,7 @@ export const SUPPORTED_LANGUAGES = [
 export type LanguageCode = typeof SUPPORTED_LANGUAGES[number]['code'];
 
 const LANG_STORAGE_KEY = 'pos_language';
-const DEFAULT_LANGUAGE: LanguageCode = 'en';
+const DEFAULT_LANGUAGE: LanguageCode = 'pt-BR';
 
 // Languages written right-to-left. Extend this list when new RTL languages are added.
 const RTL_LANGUAGES: readonly LanguageCode[] = ['ur'];
@@ -28,7 +29,7 @@ export class LanguageService {
   private translate = inject(TranslateService);
 
   currentLanguage = signal<LanguageCode>(DEFAULT_LANGUAGE);
-  currentLocale = signal<string>('en-US');
+  currentLocale = signal<string>('pt-BR');
 
   constructor() {
     this.initializeLanguage();
@@ -103,6 +104,7 @@ export class LanguageService {
 
   /**
    * Normalize language codes from various formats:
+   * - pt, pt-BR, pt_BR -> pt-BR
    * - zh, zh-Hans, zh_CN -> zh-CN
    * - es-MX, es_ES -> es
    * - etc.
@@ -117,6 +119,11 @@ export class LanguageService {
       l => l.code.toLowerCase() === lowerLang
     );
     if (directMatch) return directMatch.code;
+
+    // Brazilian Portuguese variants
+    if (lowerLang === 'pt' || lowerLang.startsWith('pt-')) {
+      return 'pt-BR';
+    }
 
     // Chinese variants
     if (lowerLang.startsWith('zh')) {
