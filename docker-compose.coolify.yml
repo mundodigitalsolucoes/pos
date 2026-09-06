@@ -1,0 +1,138 @@
+services:
+  back:
+    build:
+      context: ./back
+    image: pos-back:latest
+    restart: unless-stopped
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    expose:
+      - "8020"
+    networks:
+      - pos2_net
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-pos}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB:-pos}
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
+      STRIPE_CURRENCY: ${STRIPE_CURRENCY:-brl}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ROOT_PATH: /api
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-MDS Food}
+      SAAS_PAYWALL_ENABLED: ${SAAS_PAYWALL_ENABLED:-false}
+      SAAS_TRIAL_DAYS: ${SAAS_TRIAL_DAYS:-14}
+      SAAS_PLAN_PRICE_CENTS: ${SAAS_PLAN_PRICE_CENTS:-4900}
+      SAAS_PLAN_CURRENCY: ${SAAS_PLAN_CURRENCY:-brl}
+      SAAS_STRIPE_PRICE_ID: ${SAAS_STRIPE_PRICE_ID:-}
+      SAAS_STRIPE_WEBHOOK_SECRET: ${SAAS_STRIPE_WEBHOOK_SECRET:-}
+    volumes:
+      - pos_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile.prod
+      args:
+        COMMIT_HASH: ${COMMIT_HASH:-}
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - pos2_net
+    environment:
+      API_URL: ${API_URL:-/api}
+      WS_URL: ${WS_URL:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      GOOGLE_ANALYTICS_MEASUREMENT_ID: ${GOOGLE_ANALYTICS_MEASUREMENT_ID:-}
+    depends_on:
+      - db
+      - redis
+      - ws-bridge
+      - back
+
+  db:
+    image: postgres:18-alpine3.23
+    restart: unless-stopped
+    networks:
+      - pos2_net
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pos}
+      POSTGRES_USER: ${POSTGRES_USER:-pos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pos_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - pos2_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ws-bridge:
+    build:
+      context: ./ws-bridge
+      additional_contexts:
+        pos-back: service:back
+    image: pos-ws-bridge:latest
+    restart: unless-stopped
+    expose:
+      - "8021"
+    networks:
+      - pos2_net
+    environment:
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      API_URL: http://back:8020
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      redis:
+        condition: service_healthy
+      back:
+        condition: service_started
+
+  haproxy:
+    image: haproxy:2.8-alpine
+    restart: unless-stopped
+    expose:
+      - "4202"
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - front
+      - back
+      - ws-bridge
+    networks:
+      - pos2_net
+
+networks:
+  pos2_net:
+
+volumes:
+  pos_pgdata:
+  pos_uploads:
