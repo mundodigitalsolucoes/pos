@@ -53,6 +53,8 @@ services:
       - "80"
     networks:
       - pos2_net
+    labels:
+      - "traefik.docker.network=${COOLIFY_RESOURCE_UUID}"
     environment:
       API_URL: ${API_URL:-/api}
       WS_URL: ${WS_URL:-}
