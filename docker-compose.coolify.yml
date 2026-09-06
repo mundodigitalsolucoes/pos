@@ -119,6 +119,7 @@ services:
   haproxy:
     image: haproxy:2.8-alpine
     restart: unless-stopped
+    command: ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
     expose:
       - "4202"
     volumes:
