@@ -8,9 +8,7 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LandingSiteFooterComponent } from '../shared/landing-site-footer.component';
 import { ApiErrorMessageService } from '../services/api-error-message.service';
 
-/** Only tenant 1 is shown on the public landing page (displayed as Restaurant Demo). */
 const LANDING_DEMO_TENANT_ID = 1;
-/** Demo table name for the landing guest ordering flow (must exist on demo tenant). */
 const LANDING_DEMO_TABLE_NAME = 'Take Away';
 
 @Component({
@@ -19,12 +17,6 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
   imports: [RouterLink, TranslateModule, FormsModule, LanguagePickerComponent, QRCodeComponent, LandingSiteFooterComponent],
   template: `
     <div class="landing-page">
-      <div class="landing-hero__bg" aria-hidden="true">
-        <div class="landing-hero__orb landing-hero__orb--1"></div>
-        <div class="landing-hero__orb landing-hero__orb--2"></div>
-        <div class="landing-hero__orb landing-hero__orb--3"></div>
-      </div>
-
       <nav class="landing-nav" aria-label="Main">
         <a routerLink="/" class="landing-nav__brand">
           <img src="/logo-mds-food.png" alt="MDS Food" class="landing-nav__logo" />
@@ -32,16 +24,14 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
         <div class="landing-nav__links">
           <a routerLink="/features" class="landing-nav__link">{{ 'LANDING.NAV_FEATURES' | translate }}</a>
           <a routerLink="/pricing" class="landing-nav__link">{{ 'LANDING.NAV_PRICING' | translate }}</a>
-          <a routerLink="/about" class="landing-nav__link" data-testid="landing-nav-about">{{ 'LANDING.NAV_ABOUT' | translate }}</a>
+          <a routerLink="/about" class="landing-nav__link">{{ 'LANDING.NAV_ABOUT' | translate }}</a>
           <a href="#guests" class="landing-nav__link">{{ 'LANDING.NAV_GUESTS' | translate }}</a>
           <a href="#demo" class="landing-nav__link">{{ 'LANDING.NAV_DEMO' | translate }}</a>
         </div>
         <div class="landing-nav__actions">
           <app-language-picker class="landing-language-picker"></app-language-picker>
           <a routerLink="/login" class="landing-nav__login">{{ 'LANDING.LOGIN' | translate }}</a>
-          <a routerLink="/register" class="landing-nav__cta" data-testid="landing-hero-cta">
-            {{ 'LANDING.CTA_CREATE_QR_MENU' | translate }}
-          </a>
+          <a routerLink="/register" class="landing-nav__cta">{{ 'LANDING.CTA_CREATE_QR_MENU' | translate }}</a>
         </div>
       </nav>
 
@@ -52,18 +42,11 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
               <span class="landing-badge__dot" aria-hidden="true"></span>
               {{ 'LANDING.BADGE' | translate }}
             </p>
-            <h1 class="landing-hero__title">
-              {{ 'LANDING.TITLE' | translate }}
-              <span class="landing-hero__title-accent">{{ 'LANDING.TITLE_ACCENT' | translate }}</span>
-            </h1>
+            <h1 class="landing-hero__title">{{ 'LANDING.TITLE' | translate }}</h1>
             <p class="landing-hero__subtitle">{{ 'LANDING.SUBTITLE' | translate }}</p>
             <div class="landing-hero__actions">
-              <a routerLink="/register" class="landing-btn landing-btn--primary" data-testid="landing-primary-cta">
-                {{ 'LANDING.CTA_CREATE_QR_MENU' | translate }}
-              </a>
-              <a href="#demo" class="landing-btn landing-btn--ghost">
-                {{ 'LANDING.CTA_VIEW_DEMO' | translate }}
-              </a>
+              <a routerLink="/register" class="landing-btn landing-btn--gold">{{ 'LANDING.CTA_CREATE_QR_MENU' | translate }}</a>
+              <a href="#demo" class="landing-btn landing-btn--blue">{{ 'LANDING.CTA_VIEW_DEMO' | translate }}</a>
             </div>
           </div>
 
@@ -71,9 +54,7 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
             <div class="landing-phone">
               <div class="landing-phone__screen">
                 <div class="landing-phone__header">
-                  <span class="landing-phone__dot"></span>
-                  <span class="landing-phone__dot"></span>
-                  <span class="landing-phone__dot"></span>
+                  <span class="landing-phone__dot"></span><span class="landing-phone__dot"></span><span class="landing-phone__dot"></span>
                 </div>
                 <div class="landing-phone__menu">
                   <div class="landing-phone__line landing-phone__line--wide"></div>
@@ -102,152 +83,80 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
         </div>
       </header>
 
-      <section id="features" class="landing-features" aria-labelledby="landing-features-heading">
+      <section id="features" class="landing-features">
         <div class="landing-features__header">
-          <h2 id="landing-features-heading" class="landing-section-title">
-            {{ 'LANDING.FEATURES_HEADING' | translate }}
-          </h2>
+          <h2 class="landing-section-title">{{ 'LANDING.FEATURES_HEADING' | translate }}</h2>
           <a routerLink="/features" class="landing-features__all-link">{{ 'LANDING.FEATURES_VIEW_ALL' | translate }}</a>
         </div>
-        <ul class="landing-feature-grid" aria-label="{{ 'LANDING.VALUES_LABEL' | translate }}">
+        <ul class="landing-feature-grid">
           <li class="landing-feature-card">
             <span class="landing-feature-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
-            <h3 class="landing-feature-card__title">{{ 'LANDING.VALUE_BOOKING' | translate }}</h3>
-            <p class="landing-feature-card__text">{{ 'LANDING.VALUE_BOOKING_DESC' | translate }}</p>
+            <h3>{{ 'LANDING.VALUE_BOOKING' | translate }}</h3>
+            <p>{{ 'LANDING.VALUE_BOOKING_DESC' | translate }}</p>
           </li>
           <li class="landing-feature-card">
             <span class="landing-feature-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-                <path d="M14 14h7v7h-7z" />
-              </svg>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h7v7h-7z"/></svg>
             </span>
-            <h3 class="landing-feature-card__title">{{ 'LANDING.VALUE_DINE_IN' | translate }}</h3>
-            <p class="landing-feature-card__text">{{ 'LANDING.VALUE_DINE_IN_DESC' | translate }}</p>
+            <h3>{{ 'LANDING.VALUE_DINE_IN' | translate }}</h3>
+            <p>{{ 'LANDING.VALUE_DINE_IN_DESC' | translate }}</p>
           </li>
           <li class="landing-feature-card">
             <span class="landing-feature-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </span>
-            <h3 class="landing-feature-card__title">{{ 'LANDING.VALUE_STAFF' | translate }}</h3>
-            <p class="landing-feature-card__text">{{ 'LANDING.VALUE_STAFF_DESC' | translate }}</p>
+            <h3>{{ 'LANDING.VALUE_STAFF' | translate }}</h3>
+            <p>{{ 'LANDING.VALUE_STAFF_DESC' | translate }}</p>
           </li>
         </ul>
       </section>
 
-      <section id="demo" class="landing-qr-demo landing-restaurants" aria-labelledby="landing-qr-demo-heading">
-        @if (loading()) {
-          <p class="loading">{{ 'COMMON.LOADING' | translate }}</p>
-        } @else if (error()) {
-          <p class="error">{{ error() }}</p>
-        } @else if (tenants().length === 0) {
-          <p class="empty">{{ 'LANDING.NO_TENANTS' | translate }}</p>
-        } @else {
+      <section id="demo" class="landing-qr-demo landing-restaurants">
+        @if (loading()) { <p class="loading">{{ 'COMMON.LOADING' | translate }}</p> }
+        @else if (error()) { <p class="error">{{ error() }}</p> }
+        @else if (tenants().length === 0) { <p class="empty">{{ 'LANDING.NO_TENANTS' | translate }}</p> }
+        @else {
           @for (tenant of tenants(); track tenant.id) {
-            <article class="landing-qr-demo__layout" data-testid="landing-tenant-card">
-              <figure class="landing-qr-demo__figure" aria-label="{{ 'LANDING.PUBLIC_MENU_QR_LABEL' | translate }}">
-                <a
-                  class="landing-qr-demo__qr-link"
-                  [routerLink]="['/public-menu', tenant.id]"
-                  [attr.aria-label]="'LANDING.PUBLIC_MENU_QR_LINK_ARIA' | translate: { name: getTenantDisplayName(tenant) }"
-                >
-                  <qrcode
-                    [qrdata]="getPublicMenuUrl(tenant.id)"
-                    [width]="196"
-                    [errorCorrectionLevel]="'M'"
-                    cssClass="landing-qr-demo__code"
-                  ></qrcode>
+            <article class="landing-qr-demo__layout">
+              <figure class="landing-qr-demo__figure">
+                <a class="landing-qr-demo__qr-link" [routerLink]="['/public-menu', tenant.id]">
+                  <qrcode [qrdata]="getPublicMenuUrl(tenant.id)" [width]="196" [errorCorrectionLevel]="'M'" cssClass="landing-qr-demo__code"></qrcode>
                 </a>
                 <figcaption class="landing-qr-demo__scan-hint">{{ 'LANDING.QR_DEMO_SCAN_HINT' | translate }}</figcaption>
               </figure>
-
               <div class="landing-qr-demo__content">
-                <p class="landing-qr-demo__label" data-testid="landing-tenant-name">{{ getTenantDisplayName(tenant) }}</p>
-                <h2 id="landing-qr-demo-heading" class="landing-qr-demo__title">{{ 'LANDING.QR_DEMO_TITLE' | translate }}</h2>
+                <p class="landing-qr-demo__label">{{ getTenantDisplayName(tenant) }}</p>
+                <h2 class="landing-qr-demo__title">{{ 'LANDING.QR_DEMO_TITLE' | translate }}</h2>
                 <p class="landing-qr-demo__lede">{{ 'LANDING.QR_DEMO_LEDE' | translate }}</p>
                 <ol class="landing-qr-demo__steps">
                   <li>{{ 'LANDING.QR_DEMO_STEP_1' | translate }}</li>
                   <li>{{ 'LANDING.QR_DEMO_STEP_2' | translate }}</li>
                   <li>{{ 'LANDING.QR_DEMO_STEP_3' | translate }}</li>
                 </ol>
-                <div class="landing-qr-demo__actions">
-                  <a [routerLink]="['/public-menu', tenant.id]" class="landing-qr-demo__action landing-qr-demo__action--primary">
-                    {{ 'LANDING.QR_DEMO_OPEN_MENU' | translate }}
-                  </a>
-                </div>
+                <a [routerLink]="['/public-menu', tenant.id]" class="landing-qr-demo__action">{{ 'LANDING.QR_DEMO_OPEN_MENU' | translate }}</a>
               </div>
             </article>
           }
         }
       </section>
 
-      <section id="guests" class="landing-guests" aria-labelledby="landing-guests-heading">
+      <section id="guests" class="landing-guests">
         <div class="landing-guests__layout">
-          <div class="landing-guests__copy">
-            <h2 id="landing-guests-heading" class="landing-guests__title">{{ 'LANDING.SECTION_GUESTS' | translate }}</h2>
+          <div>
+            <h2 class="landing-guests__title">{{ 'LANDING.SECTION_GUESTS' | translate }}</h2>
             <p class="landing-guests__lede">{{ 'LANDING.GUEST_LEDE' | translate }}</p>
             <p class="landing-guests__demo-note">{{ 'LANDING.GUEST_DEMO_NOTE' | translate }}</p>
           </div>
-
-          <div class="landing-guests__form" aria-label="{{ 'LANDING.AT_TABLE_LABEL' | translate }}">
+          <div>
             <label class="landing-guests__label" for="landing-table-code">{{ 'LANDING.GUEST_TABLE_LABEL' | translate }}</label>
             <div class="landing-guests__row">
-              <input
-                id="landing-table-code"
-                type="text"
-                [(ngModel)]="tableCode"
-                [placeholder]="'LANDING.TABLE_CODE_PLACEHOLDER' | translate"
-                class="landing-guests__input"
-                (ngModelChange)="onTableCodeInput()"
-                (keyup.enter)="goToTableMenu()"
-              />
-              <button
-                type="button"
-                class="landing-guests__submit"
-                [disabled]="tableLookupLoading()"
-                (click)="goToTableMenu()"
-              >
-                {{ 'LANDING.GO' | translate }}
-              </button>
+              <input id="landing-table-code" type="text" [(ngModel)]="tableCode" [placeholder]="'LANDING.TABLE_CODE_PLACEHOLDER' | translate" class="landing-guests__input" (ngModelChange)="onTableCodeInput()" (keyup.enter)="goToTableMenu()" />
+              <button type="button" class="landing-guests__submit" [disabled]="tableLookupLoading()" (click)="goToTableMenu()">{{ 'LANDING.GO' | translate }}</button>
             </div>
-            <button
-              type="button"
-              class="landing-guests__demo-btn"
-              [disabled]="tableLookupLoading()"
-              (click)="tryDemoTable()"
-            >
-              {{ 'LANDING.GUEST_TRY_DEMO' | translate }}
-            </button>
-            @if (tableLookupError()) {
-              <p class="landing-guests__error" role="alert">{{ tableLookupError() }}</p>
-            }
-            @if (tableLookupChoices().length > 0) {
-              <p class="landing-guests__pick-title">{{ 'LANDING.TABLE_MULTIPLE_TITLE' | translate }}</p>
-              <p class="landing-guests__pick-hint">{{ 'LANDING.TABLE_MULTIPLE_HINT' | translate }}</p>
-              <ul class="landing-guests__choices">
-                @for (c of tableLookupChoices(); track c.tenant_id + '-' + c.table_token) {
-                  <li>
-                    <button type="button" class="landing-guests__choice-btn" (click)="selectRestaurantForTable(c)">
-                      {{ c.tenant_name }}
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
+            <button type="button" class="landing-guests__demo-btn" [disabled]="tableLookupLoading()" (click)="tryDemoTable()">{{ 'LANDING.GUEST_TRY_DEMO' | translate }}</button>
+            @if (tableLookupError()) { <p class="landing-guests__error">{{ tableLookupError() }}</p> }
           </div>
         </div>
       </section>
@@ -256,381 +165,101 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
     </div>
   `,
   styles: [`
-    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
-
     .landing-page {
-      --landing-bg: #171b2e;
-      --landing-surface: rgba(55, 75, 137, 0.13);
-      --landing-border: rgba(255, 255, 255, 0.12);
-      --landing-text: #ffffff;
-      --landing-muted: rgba(255, 255, 255, 0.72);
-      --landing-accent: #7f99e8;
-      --landing-accent-soft: rgba(55, 75, 137, 0.28);
-
+      --cream: #f7f5ef;
+      --navy: #2f3453;
+      --blue: #374b89;
+      --gold: #d6a92f;
+      --gold-hover: #c19620;
+      --ink: #20243a;
+      --muted: #667085;
       min-height: 100vh;
-      padding-bottom: var(--space-8);
-      background:
-        radial-gradient(circle at 50% -15%, rgba(55, 75, 137, 0.24), transparent 40%),
-        linear-gradient(180deg, #171b2e 0%, #202642 48%, #2f3453 100%);
-      color: var(--landing-text);
-      position: relative;
-      overflow-x: clip;
-    }
-
-    .landing-hero__bg {
-      position: absolute;
-      inset: 0 0 auto;
-      height: min(920px, 120vh);
-      pointer-events: none;
-      overflow: hidden;
-      z-index: 0;
-    }
-
-    .landing-hero__orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(90px);
-      opacity: 0.48;
-      animation: landing-float 18s ease-in-out infinite;
-    }
-
-    .landing-hero__orb--1 {
-      width: min(680px, 90vw);
-      height: min(680px, 90vw);
-      top: -18%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: radial-gradient(circle, rgba(55, 75, 137, 0.9) 0%, rgba(47, 52, 83, 0.25) 46%, transparent 72%);
-    }
-
-    .landing-hero__orb--2 {
-      width: 420px;
-      height: 420px;
-      top: 18%;
-      right: -8%;
-      background: radial-gradient(circle, rgba(89, 116, 196, 0.42) 0%, transparent 70%);
-      animation-delay: -6s;
-    }
-
-    .landing-hero__orb--3 {
-      width: 360px;
-      height: 360px;
-      bottom: 8%;
-      left: -6%;
-      background: radial-gradient(circle, rgba(47, 52, 83, 0.55) 0%, transparent 70%);
-      animation-delay: -12s;
-    }
-
-    @keyframes landing-float {
-      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-      50% { transform: translate3d(0, -24px, 0) scale(1.04); }
+      background: var(--cream);
+      color: var(--ink);
     }
 
     .landing-nav {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-4);
-      flex-wrap: wrap;
-      max-width: 72rem;
-      margin: 0 auto;
-      padding: var(--space-4) var(--space-5);
+      display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap;
+      max-width:72rem; margin:0 auto; padding:1.35rem var(--space-5); background:transparent;
     }
-
-    .landing-nav__brand {
-      display: inline-flex;
-      align-items: center;
-      color: var(--landing-text);
-      text-decoration: none;
-    }
-
-    .landing-nav__logo {
-      width: 132px;
-      height: auto;
-      max-height: 58px;
-      object-fit: contain;
-      object-position: left center;
-      filter: brightness(0) invert(1);
-    }
-
-    .landing-nav__links {
-      display: none;
-      align-items: center;
-      gap: var(--space-5);
-    }
-
-    .landing-nav__link {
-      color: var(--landing-muted);
-      font-size: 0.9375rem;
-      font-weight: 500;
-      text-decoration: none;
-      transition: color 0.15s ease;
-    }
-
-    .landing-nav__link:hover {
-      color: var(--landing-text);
-      text-decoration: none;
-    }
-
-    .landing-nav__actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      margin-left: auto;
-    }
-
-    .landing-language-picker { z-index: 10; }
-
-    .landing-nav__login {
-      display: none;
-      color: var(--landing-muted);
-      font-size: 0.9375rem;
-      font-weight: 500;
-      text-decoration: none;
-      padding: var(--space-2) var(--space-3);
-    }
-
-    .landing-nav__login:hover { color: var(--landing-text); text-decoration: none; }
-
-    .landing-nav__cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.625rem 1rem;
-      border-radius: 999px;
-      background: #ffffff;
-      border: 1px solid #ffffff;
-      color: #2f3453;
-      font-size: 0.8125rem;
-      font-weight: 700;
-      text-decoration: none;
-      white-space: nowrap;
-      transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
-    }
-
-    .landing-nav__cta:hover {
-      background: #eef2ff;
-      color: #2f3453;
-      text-decoration: none;
-      transform: translateY(-1px);
-    }
-
-    @media (min-width: 768px) {
-      .landing-nav__links { display: flex; }
-      .landing-nav__login { display: inline-flex; }
-      .landing-nav__cta { font-size: 0.875rem; padding: 0.6875rem 1.125rem; }
-    }
+    .landing-nav__brand { display:inline-flex; align-items:center; text-decoration:none; }
+    .landing-nav__logo { width:264px; max-height:112px; height:auto; object-fit:contain; object-position:left center; }
+    .landing-nav__links { display:none; align-items:center; gap:var(--space-5); }
+    .landing-nav__link,.landing-nav__login { color:var(--navy); font-size:.9375rem; font-weight:600; text-decoration:none; }
+    .landing-nav__link:hover,.landing-nav__login:hover { color:var(--blue); text-decoration:none; }
+    .landing-nav__actions { display:flex; align-items:center; gap:var(--space-2); margin-left:auto; }
+    .landing-nav__login { display:none; padding:var(--space-2) var(--space-3); }
+    .landing-nav__cta { display:inline-flex; align-items:center; justify-content:center; padding:.72rem 1.15rem; border-radius:999px; background:var(--gold); color:#fff; border:1px solid var(--gold); font-weight:800; text-decoration:none; }
+    .landing-nav__cta:hover { background:var(--gold-hover); border-color:var(--gold-hover); text-decoration:none; }
+    @media(min-width:768px){ .landing-nav__links{display:flex}.landing-nav__login{display:inline-flex} }
 
     .landing-hero {
-      position: relative;
-      z-index: 1;
-      max-width: 72rem;
-      margin: 0 auto;
-      padding: var(--space-6) var(--space-5) var(--space-8);
+      background:var(--cream);
+      border-top:1px solid rgba(47,52,83,.08);
+      border-bottom:1px solid rgba(47,52,83,.08);
     }
+    .landing-hero__content { max-width:72rem; margin:0 auto; padding:4.5rem var(--space-5) 5rem; display:grid; grid-template-columns:1fr; gap:var(--space-8); align-items:center; }
+    @media(min-width:960px){ .landing-hero__content{grid-template-columns:1.08fr .92fr} }
+    .landing-badge { display:inline-flex; align-items:center; gap:var(--space-2); margin:0 0 var(--space-5); padding:.45rem .85rem; border-radius:999px; background:#fff; border:1px solid rgba(55,75,137,.14); color:var(--navy); font-size:.8125rem; font-weight:700; box-shadow:0 8px 28px rgba(47,52,83,.06); }
+    .landing-badge__dot { width:8px; height:8px; border-radius:50%; background:var(--gold); }
+    .landing-hero__title { margin:0 0 var(--space-4); max-width:780px; font-size:clamp(2.7rem,6vw,4.9rem); line-height:.98; letter-spacing:-.045em; color:var(--navy); font-weight:800; }
+    .landing-hero__subtitle { margin:0 0 var(--space-6); max-width:36rem; font-size:clamp(1rem,2.1vw,1.2rem); line-height:1.65; color:var(--muted); }
+    .landing-hero__actions { display:flex; flex-wrap:wrap; gap:var(--space-3); }
+    .landing-btn { display:inline-flex; align-items:center; justify-content:center; padding:.9rem 1.4rem; border-radius:999px; font-size:.95rem; font-weight:800; text-decoration:none; transition:.15s ease; }
+    .landing-btn:hover { transform:translateY(-1px); text-decoration:none; }
+    .landing-btn--gold { background:var(--gold); color:#fff; box-shadow:0 12px 30px rgba(214,169,47,.24); }
+    .landing-btn--gold:hover { background:var(--gold-hover); }
+    .landing-btn--blue { background:var(--blue); color:#fff; box-shadow:0 12px 30px rgba(55,75,137,.18); }
+    .landing-btn--blue:hover { background:#2f427b; }
 
-    .landing-hero__content {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--space-8);
-      align-items: center;
-    }
+    .landing-hero__visual { display:flex; justify-content:center; perspective:1200px; }
+    .landing-phone { width:min(100%,300px); padding:12px; border-radius:38px; background:linear-gradient(160deg,#fff,#e8eaf4); border:1px solid rgba(47,52,83,.14); box-shadow:0 28px 70px rgba(47,52,83,.18); transform:rotateY(-10deg) rotateX(6deg); }
+    .landing-phone__screen { border-radius:28px; overflow:hidden; background:linear-gradient(180deg,#2f3453 0%,#202642 100%); min-height:360px; display:flex; flex-direction:column; }
+    .landing-phone__header{display:flex;gap:6px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .landing-phone__dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.28)}
+    .landing-phone__menu{padding:20px 18px 12px;display:flex;flex-direction:column;gap:10px}
+    .landing-phone__line{height:10px;border-radius:999px;background:rgba(255,255,255,.13);width:88%}
+    .landing-phone__line--wide{width:56%;height:14px;background:var(--gold)}
+    .landing-phone__line--short{width:42%}
+    .landing-phone__qr{margin:auto;padding:18px;display:flex;justify-content:center}
 
-    @media (min-width: 960px) {
-      .landing-hero__content { grid-template-columns: 1.05fr 0.95fr; gap: var(--space-6); }
-    }
+    .landing-features,.landing-qr-demo,.landing-guests { max-width:72rem; margin:0 auto; padding:4.5rem var(--space-5); }
+    .landing-features { background:#fff; max-width:none; }
+    .landing-features__header,.landing-feature-grid { max-width:72rem; margin-left:auto; margin-right:auto; }
+    .landing-features__header { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-bottom:var(--space-6); }
+    .landing-section-title { margin:0; color:var(--navy); font-size:clamp(1.6rem,3vw,2.1rem); letter-spacing:-.03em; }
+    .landing-features__all-link { color:var(--blue); font-weight:700; text-decoration:none; }
+    .landing-feature-grid { list-style:none; padding:0; display:grid; grid-template-columns:1fr; gap:var(--space-4); }
+    @media(min-width:768px){ .landing-feature-grid{grid-template-columns:repeat(3,1fr)} }
+    .landing-feature-card { padding:1.5rem; border-radius:20px; background:var(--cream); border:1px solid rgba(47,52,83,.08); box-shadow:0 10px 30px rgba(47,52,83,.05); }
+    .landing-feature-card__icon { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; margin-bottom:var(--space-4); border-radius:12px; background:rgba(214,169,47,.14); color:var(--gold); }
+    .landing-feature-card h3 { margin:0 0 .5rem; color:var(--navy); font-size:1rem; }
+    .landing-feature-card p { margin:0; color:var(--muted); line-height:1.55; font-size:.9rem; }
 
-    .landing-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      margin: 0 0 var(--space-5);
-      padding: 0.375rem 0.875rem 0.375rem 0.625rem;
-      border-radius: 999px;
-      border: 1px solid rgba(127, 153, 232, 0.28);
-      background: rgba(55, 75, 137, 0.16);
-      font-size: 0.8125rem;
-      color: var(--landing-muted);
-    }
+    .landing-qr-demo { background:var(--cream); }
+    .landing-qr-demo .loading,.landing-qr-demo .error,.landing-qr-demo .empty { color:var(--muted); text-align:center; }
+    .landing-qr-demo__layout { display:grid; grid-template-columns:1fr; gap:var(--space-6); align-items:center; }
+    @media(min-width:860px){ .landing-qr-demo__layout{grid-template-columns:minmax(220px,280px) 1fr} }
+    .landing-qr-demo__figure { margin:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-3); }
+    .landing-qr-demo__qr-link { display:inline-flex; padding:var(--space-4); background:#fff; border-radius:20px; box-shadow:0 20px 50px rgba(47,52,83,.12); }
+    .landing-qr-demo__scan-hint,.landing-qr-demo__lede,.landing-qr-demo__steps { color:var(--muted); }
+    .landing-qr-demo__label { color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.06em; font-size:.8rem; }
+    .landing-qr-demo__title { color:var(--navy); font-size:clamp(1.5rem,3vw,2rem); margin:.35rem 0 .75rem; }
+    .landing-qr-demo__steps { padding-left:1.25rem; }
+    .landing-qr-demo__action { display:inline-flex; margin-top:var(--space-3); padding:.75rem 1.1rem; border-radius:999px; background:var(--blue); color:#fff; font-weight:800; text-decoration:none; }
 
-    .landing-badge__dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #7f99e8;
-      box-shadow: 0 0 12px rgba(127, 153, 232, 0.65);
-    }
-
-    .landing-hero__title {
-      margin: 0 0 var(--space-4);
-      font-size: clamp(2.5rem, 6vw, 4.25rem);
-      font-weight: 700;
-      line-height: 1.02;
-      letter-spacing: -0.04em;
-      color: var(--landing-text);
-    }
-
-    .landing-hero__title-accent {
-      display: block;
-      font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-      font-style: italic;
-      font-weight: 400;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #ffffff 0%, #aebdf0 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .landing-hero__subtitle {
-      margin: 0 0 var(--space-6);
-      max-width: 34rem;
-      font-size: clamp(1rem, 2.2vw, 1.1875rem);
-      line-height: 1.6;
-      color: var(--landing-muted);
-    }
-
-    .landing-hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-
-    .landing-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.875rem 1.375rem;
-      border-radius: 999px;
-      font-size: 0.9375rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-    }
-
-    .landing-btn:hover { text-decoration: none; transform: translateY(-1px); }
-
-    .landing-btn--primary {
-      background: #ffffff;
-      color: #2f3453;
-      box-shadow: 0 12px 40px rgba(55, 75, 137, 0.22);
-    }
-
-    .landing-btn--primary:hover { background: #eef2ff; box-shadow: 0 16px 48px rgba(55, 75, 137, 0.3); }
-
-    .landing-btn--ghost {
-      background: rgba(55, 75, 137, 0.18);
-      border: 1px solid rgba(127, 153, 232, 0.28);
-      color: var(--landing-text);
-    }
-
-    .landing-btn--ghost:hover { background: rgba(55, 75, 137, 0.28); }
-
-    .landing-btn--large { padding: 1rem 1.75rem; font-size: 1rem; }
-
-    .landing-hero__visual { display: flex; justify-content: center; perspective: 1200px; }
-
-    .landing-phone {
-      width: min(100%, 280px);
-      padding: 12px;
-      border-radius: 36px;
-      background: linear-gradient(160deg, rgba(127, 153, 232, 0.18), rgba(47, 52, 83, 0.16));
-      border: 1px solid rgba(127, 153, 232, 0.28);
-      box-shadow: 0 30px 80px rgba(16, 20, 42, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-      transform: rotateY(-12deg) rotateX(8deg);
-      animation: landing-phone-tilt 8s ease-in-out infinite;
-    }
-
-    @keyframes landing-phone-tilt {
-      0%, 100% { transform: rotateY(-12deg) rotateX(8deg) translateY(0); }
-      50% { transform: rotateY(-8deg) rotateX(4deg) translateY(-8px); }
-    }
-
-    .landing-phone__screen {
-      border-radius: 28px;
-      overflow: hidden;
-      background: linear-gradient(180deg, #202642 0%, #171b2e 100%);
-      border: 1px solid rgba(127, 153, 232, 0.16);
-      min-height: 360px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .landing-phone__header { display: flex; gap: 6px; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.06); }
-    .landing-phone__dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
-    .landing-phone__menu { padding: 20px 18px 12px; display: flex; flex-direction: column; gap: 10px; }
-    .landing-phone__line { height: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); width: 88%; }
-    .landing-phone__line--wide { width: 56%; height: 14px; background: rgba(127, 153, 232, 0.48); }
-    .landing-phone__line--short { width: 42%; }
-    .landing-phone__qr { margin: auto; padding: 18px; display: flex; justify-content: center; }
-
-    .landing-features, .landing-guests, .landing-qr-demo {
-      position: relative;
-      z-index: 2;
-      max-width: 72rem;
-      margin: 0 auto;
-      padding: var(--space-2) var(--space-5) var(--space-8);
-      scroll-margin-top: 5rem;
-    }
-
-    .landing-features__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-6); }
-    .landing-features__header .landing-section-title { margin: 0; text-align: left; }
-    .landing-features__all-link { color: var(--landing-muted); font-size: .9375rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
-    .landing-features__all-link:hover { color: var(--landing-text); }
-    .landing-section-title { margin: 0 0 var(--space-6); text-align: center; font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 600; letter-spacing: -.02em; color: var(--landing-text); }
-
-    .landing-feature-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
-    @media (min-width: 768px) { .landing-feature-grid { grid-template-columns: repeat(3, 1fr); } }
-    .landing-feature-card { padding: var(--space-5); border-radius: 20px; background: rgba(55,75,137,.13); border: 1px solid rgba(127,153,232,.16); backdrop-filter: blur(12px); }
-    .landing-feature-card__icon { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; margin-bottom:var(--space-4); border-radius:12px; background:rgba(127,153,232,.14); color:#aebdf0; }
-    .landing-feature-card__title { margin:0 0 var(--space-2); font-size:1rem; font-weight:600; color:var(--landing-text); }
-    .landing-feature-card__text { margin:0; font-size:.875rem; line-height:1.55; color:var(--landing-muted); }
-
-    .landing-guests__layout {
-      display:grid; grid-template-columns:1fr; gap:var(--space-6); align-items:start; padding:var(--space-6); border-radius:24px;
-      background:rgba(55,75,137,.13); border:1px solid rgba(127,153,232,.16); backdrop-filter:blur(12px);
-    }
-    @media (min-width:860px){.landing-guests__layout{grid-template-columns:1fr 1fr;gap:var(--space-8);padding:var(--space-8)}}
-    .landing-guests__title{margin:0 0 var(--space-3);font-size:clamp(1.375rem,3vw,1.75rem);font-weight:700;letter-spacing:-.03em;color:var(--landing-text)}
-    .landing-guests__lede{margin:0 0 var(--space-3);font-size:1rem;line-height:1.6;color:var(--landing-muted);max-width:34rem}
-    .landing-guests__demo-note{margin:0;font-size:.875rem;line-height:1.5;color:rgba(255,255,255,.8);max-width:34rem}
-    .landing-guests__label{display:block;margin:0 0 var(--space-2);font-size:.8125rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--landing-muted)}
-    .landing-guests__row{display:flex;gap:var(--space-2);min-width:0}
-    .landing-guests__input{flex:1 1 0;min-width:0;padding:.875rem 1rem;border-radius:12px;border:1px solid rgba(127,153,232,.18);background:rgba(255,255,255,.06);color:var(--landing-text);font-size:1rem}
-    .landing-guests__input::placeholder{color:rgba(255,255,255,.42)}
-    .landing-guests__input:focus{outline:none;border-color:#7f99e8;box-shadow:0 0 0 3px rgba(127,153,232,.18)}
-    .landing-guests__submit{flex-shrink:0;padding:.875rem 1.25rem;border:none;border-radius:12px;background:#fff;color:#2f3453;font-size:.9375rem;font-weight:700;cursor:pointer;transition:opacity .15s ease}
-    .landing-guests__submit:hover:not(:disabled){opacity:.94}.landing-guests__submit:disabled{opacity:.55;cursor:not-allowed}
-    .landing-guests__demo-btn{margin-top:var(--space-3);width:100%;padding:.75rem 1rem;border-radius:12px;border:1px solid rgba(127,153,232,.2);background:rgba(55,75,137,.18);color:var(--landing-text);font-size:.875rem;font-weight:600;cursor:pointer;transition:background .15s ease,border-color .15s ease}
-    .landing-guests__demo-btn:hover:not(:disabled){background:rgba(55,75,137,.28);border-color:rgba(127,153,232,.32)}
-    .landing-guests__demo-btn:disabled{opacity:.55;cursor:not-allowed}
-    @media(max-width:480px){.landing-guests__row{flex-wrap:wrap}.landing-guests__submit{flex:1 1 auto}}
-    .landing-guests__error{margin:var(--space-3) 0 0;font-size:.875rem;color:#fecaca}
-    .landing-guests__pick-title{margin:var(--space-4) 0 var(--space-2);font-weight:600;font-size:.9375rem;color:var(--landing-text)}
-    .landing-guests__pick-hint{margin:0 0 var(--space-3);font-size:.875rem;color:var(--landing-muted)}
-    .landing-guests__choices{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-2)}
-    .landing-guests__choice-btn{width:100%;padding:var(--space-3) var(--space-4);text-align:center;background:rgba(55,75,137,.18);color:var(--landing-text);border:1px solid rgba(127,153,232,.2);border-radius:12px;font-weight:500;font-size:.9375rem;cursor:pointer}
-    .landing-guests__choice-btn:hover{background:rgba(55,75,137,.3)}
-
-    .landing-qr-demo .loading,.landing-qr-demo .error,.landing-qr-demo .empty{color:var(--landing-muted);margin:var(--space-4) 0;text-align:center}
-    .landing-qr-demo .error{color:#fecaca}
-    .landing-qr-demo__layout{display:grid;grid-template-columns:1fr;gap:var(--space-6);align-items:center}
-    @media(min-width:860px){.landing-qr-demo__layout{grid-template-columns:minmax(220px,280px) 1fr;gap:var(--space-8)}}
-    .landing-qr-demo__figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
-    .landing-qr-demo__qr-link{display:inline-flex;padding:var(--space-4);background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(16,20,42,.38),0 0 0 1px rgba(127,153,232,.14);text-decoration:none;transition:transform .2s ease,box-shadow .2s ease}
-    .landing-qr-demo__qr-link:hover{transform:translateY(-2px);box-shadow:0 28px 70px rgba(16,20,42,.46),0 0 0 1px rgba(127,153,232,.24)}
-    .landing-qr-demo__qr-link:focus-visible{outline:2px solid var(--landing-accent);outline-offset:4px}
-    :host ::ng-deep .landing-qr-demo__code img{display:block;pointer-events:none}
-    .landing-qr-demo__scan-hint{font-size:.8125rem;color:var(--landing-muted);text-align:center}
-    .landing-qr-demo__content{min-width:0}
-    .landing-qr-demo__label{margin:0 0 var(--space-2);font-size:.8125rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#aebdf0}
-    .landing-qr-demo__title{margin:0 0 var(--space-3);font-size:clamp(1.5rem,3.5vw,2rem);font-weight:700;letter-spacing:-.03em;line-height:1.15;color:var(--landing-text)}
-    .landing-qr-demo__lede{margin:0 0 var(--space-5);font-size:1rem;line-height:1.6;color:var(--landing-muted);max-width:38rem}
-    .landing-qr-demo__steps{margin:0 0 var(--space-5);padding-left:1.25rem;display:flex;flex-direction:column;gap:var(--space-3);max-width:38rem}
-    .landing-qr-demo__steps li{font-size:.9375rem;line-height:1.55;color:rgba(255,255,255,.84)}
-    .landing-qr-demo__actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
-    .landing-qr-demo__action{display:inline-flex;align-items:center;justify-content:center;padding:.625rem 1rem;border-radius:999px;font-size:.875rem;font-weight:600;text-decoration:none;border:1px solid rgba(127,153,232,.2);color:var(--landing-text);background:rgba(55,75,137,.18);transition:background .15s ease,border-color .15s ease}
-    .landing-qr-demo__action:hover{background:rgba(55,75,137,.3);border-color:rgba(127,153,232,.32);text-decoration:none}
-    .landing-qr-demo__action--primary{background:#fff;color:#2f3453;border-color:transparent}
-    .landing-qr-demo__action--primary:hover{background:#eef2ff}
+    .landing-guests { background:#fff; max-width:none; }
+    .landing-guests__layout { max-width:72rem; margin:0 auto; display:grid; grid-template-columns:1fr; gap:var(--space-6); padding:2rem; border-radius:24px; background:var(--cream); border:1px solid rgba(47,52,83,.08); }
+    @media(min-width:860px){ .landing-guests__layout{grid-template-columns:1fr 1fr;gap:var(--space-8);padding:2.5rem} }
+    .landing-guests__title { margin:0 0 .75rem; color:var(--navy); font-size:clamp(1.4rem,3vw,1.9rem); }
+    .landing-guests__lede,.landing-guests__demo-note { color:var(--muted); }
+    .landing-guests__label { display:block; margin:0 0 .5rem; color:var(--navy); font-weight:800; font-size:.78rem; text-transform:uppercase; }
+    .landing-guests__row { display:flex; gap:.5rem; }
+    .landing-guests__input { flex:1; min-width:0; padding:.875rem 1rem; border-radius:12px; border:1px solid rgba(47,52,83,.14); background:#fff; color:var(--ink); }
+    .landing-guests__input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(55,75,137,.12); }
+    .landing-guests__submit { padding:.875rem 1.2rem; border:none; border-radius:12px; background:var(--gold); color:#fff; font-weight:800; }
+    .landing-guests__demo-btn { margin-top:.75rem; width:100%; padding:.75rem 1rem; border-radius:12px; border:1px solid var(--blue); background:var(--blue); color:#fff; font-weight:800; }
+    .landing-guests__error { color:#b42318; }
   `],
 })
 export class LandingComponent implements OnInit {
@@ -651,13 +280,9 @@ export class LandingComponent implements OnInit {
     this.api.waitForInitialAuthCheck().subscribe(() => {
       const user = this.api.getCurrentUser();
       if (user) {
-        if (user.role === 'courier') {
-          void this.router.navigate(['/courier']);
-        } else if (user.provider_id != null) {
-          void this.router.navigate(['/provider']);
-        } else {
-          void this.router.navigate(['/dashboard']);
-        }
+        if (user.role === 'courier') void this.router.navigate(['/courier']);
+        else if (user.provider_id != null) void this.router.navigate(['/provider']);
+        else void this.router.navigate(['/dashboard']);
         return;
       }
       this.loadTenants();
@@ -669,8 +294,7 @@ export class LandingComponent implements OnInit {
     this.error.set(null);
     this.api.getPublicTenants().subscribe({
       next: (list) => {
-        const demo = list.filter((t) => t.id === LANDING_DEMO_TENANT_ID);
-        this.tenants.set(demo);
+        this.tenants.set(list.filter((t) => t.id === LANDING_DEMO_TENANT_ID));
         this.loading.set(false);
       },
       error: (err) => {
@@ -680,55 +304,28 @@ export class LandingComponent implements OnInit {
     });
   }
 
-  getTenantDisplayName(_tenant: TenantSummary): string {
-    return this.translate.instant('LANDING.RESTAURANT_DEMO_NAME');
-  }
-
-  getPublicMenuUrl(tenantId: number): string {
-    if (typeof window === 'undefined') return `/public-menu/${tenantId}`;
-    return `${window.location.origin}/public-menu/${tenantId}`;
-  }
-
-  tryDemoTable(): void {
-    this.tableCode = LANDING_DEMO_TABLE_NAME;
-    this.goToTableMenu();
-  }
-
-  onTableCodeInput(): void {
-    this.tableLookupError.set(null);
-    if (this.tableLookupChoices().length > 0) this.tableLookupChoices.set([]);
-  }
-
+  getTenantDisplayName(_tenant: TenantSummary): string { return this.translate.instant('LANDING.RESTAURANT_DEMO_NAME'); }
+  getPublicMenuUrl(tenantId: number): string { return typeof window === 'undefined' ? `/public-menu/${tenantId}` : `${window.location.origin}/public-menu/${tenantId}`; }
+  tryDemoTable(): void { this.tableCode = LANDING_DEMO_TABLE_NAME; this.goToTableMenu(); }
+  onTableCodeInput(): void { this.tableLookupError.set(null); if (this.tableLookupChoices().length > 0) this.tableLookupChoices.set([]); }
   goToTableMenu(): void {
     const raw = this.tableCode?.trim();
     if (!raw) return;
-    this.tableLookupError.set(null);
-    this.tableLookupChoices.set([]);
-    this.tableLookupLoading.set(true);
+    this.tableLookupError.set(null); this.tableLookupChoices.set([]); this.tableLookupLoading.set(true);
     this.api.lookupPublicTable(raw).subscribe({
       next: (res) => {
         this.tableLookupLoading.set(false);
-        if (res.table_token) {
-          void this.router.navigate(['/menu', res.table_token]);
-          return;
-        }
-        if (res.ambiguous && res.choices?.length) {
-          this.tableLookupChoices.set(res.choices);
-          return;
-        }
+        if (res.table_token) { void this.router.navigate(['/menu', res.table_token]); return; }
+        if (res.ambiguous && res.choices?.length) { this.tableLookupChoices.set(res.choices); return; }
         this.tableLookupError.set(this.translate.instant('LANDING.TABLE_LOOKUP_FAILED'));
       },
       error: (err) => {
         this.tableLookupLoading.set(false);
-        if (err?.status === 404) this.tableLookupError.set(this.translate.instant('LANDING.TABLE_NOT_FOUND'));
-        else this.tableLookupError.set(this.translate.instant('LANDING.TABLE_LOOKUP_FAILED'));
+        this.tableLookupError.set(this.translate.instant(err?.status === 404 ? 'LANDING.TABLE_NOT_FOUND' : 'LANDING.TABLE_LOOKUP_FAILED'));
       },
     });
   }
-
   selectRestaurantForTable(choice: PublicTableLookupChoice): void {
-    this.tableLookupChoices.set([]);
-    this.tableLookupError.set(null);
-    void this.router.navigate(['/menu', choice.table_token]);
+    this.tableLookupChoices.set([]); this.tableLookupError.set(null); void this.router.navigate(['/menu', choice.table_token]);
   }
 }
