@@ -39,7 +39,8 @@ import { environment } from '../../environments/environment';
             <span class="landing-footer__group-label">{{ 'LANDING.FOOTER_SUPPORT' | translate }}</span>
             <a routerLink="/about" data-testid="landing-about">{{ 'LANDING.NAV_ABOUT' | translate }}</a>
             <a routerLink="/manual-usuario" data-testid="landing-user-manual">{{ 'LANDING.USER_MANUAL' | translate }}</a>
-            <a href="mailto:hello@satisfecho.de" data-testid="landing-contact-us">{{ 'LANDING.CONTACT_US' | translate }}</a>
+            <a href="mailto:contato@mundodigitalsolucoes.com.br" data-testid="landing-contact-us">{{ 'LANDING.CONTACT_US' | translate }}</a>
+            <a href="https://wa.me/5517992822597" target="_blank" rel="noopener noreferrer">WhatsApp: (17) 99282-2597</a>
             <a routerLink="/terms" data-testid="landing-terms">{{ 'LEGAL.TERMS_OF_SERVICE' | translate }}</a>
             <a routerLink="/privacy" data-testid="landing-privacy">{{ 'LEGAL.PRIVACY_POLICY' | translate }}</a>
           </div>
@@ -47,12 +48,22 @@ import { environment } from '../../environments/environment';
       </div>
 
       <div class="landing-version-bar" data-testid="landing-version">
+        <img src="/logo-mds-food.png" alt="MDS Food — Soluções para seu restaurante" class="landing-footer-logo" />
+        <p class="landing-version-company" data-testid="landing-company">
+          Mundo Digital Soluções · CNPJ 58.694.408/0001-90
+        </p>
+        <p class="landing-version-contact">
+          <a href="https://wa.me/5517992822597" target="_blank" rel="noopener noreferrer">WhatsApp (17) 99282-2597</a>
+          <span aria-hidden="true"> · </span>
+          <a href="mailto:contato@mundodigitalsolucoes.com.br">contato@mundodigitalsolucoes.com.br</a>
+        </p>
+        <p class="landing-version-tagline">{{ 'LANDING.OPEN_SOURCE_TAGLINE' | translate }}</p>
         <div class="landing-version-bar__row">
           <span class="landing-version-meta"
             >{{ version || '0.0.0' }} <span class="landing-commit">{{ commitHash || '' }}</span></span
           >
           <a
-            href="https://github.com/satisfecho/pos/"
+            href="https://github.com/mundodigitalsolucoes/pos/"
             target="_blank"
             rel="noopener noreferrer"
             class="landing-version-github"
@@ -74,18 +85,16 @@ import { environment } from '../../environments/environment';
             </svg>
           </a>
         </div>
-        <p class="landing-version-company" data-testid="landing-company">
-          {{ 'LANDING.COMPANY_OPERATOR' | translate }}
-        </p>
-        <p class="landing-version-tagline">{{ 'LANDING.OPEN_SOURCE_TAGLINE' | translate }}</p>
       </div>
     </footer>
   `,
   styles: [`
     :host {
-      --landing-border: rgba(255, 255, 255, 0.1);
-      --landing-text: #fafafa;
-      --landing-muted: rgba(250, 250, 250, 0.62);
+      --landing-border: rgba(255, 255, 255, 0.12);
+      --landing-text: #ffffff;
+      --landing-muted: rgba(255, 255, 255, 0.68);
+      --landing-primary: #374b89;
+      --landing-primary-dark: #2f3453;
       display: block;
     }
 
@@ -94,7 +103,7 @@ import { environment } from '../../environments/environment';
       z-index: 2;
       margin-top: var(--space-4);
       border-top: 1px solid var(--landing-border);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(0, 0, 0, 0.35) 100%);
+      background: linear-gradient(180deg, #2f3453 0%, #252a46 100%);
     }
 
     .landing-site-footer__cta {
@@ -137,13 +146,14 @@ import { environment } from '../../environments/environment';
     }
 
     .landing-btn--primary {
-      background: #fff;
-      color: #0a0a0b;
-      box-shadow: 0 12px 40px rgba(255, 255, 255, 0.12);
+      background: #ffffff;
+      color: var(--landing-primary-dark);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
     }
 
     .landing-btn--primary:hover {
-      box-shadow: 0 16px 48px rgba(255, 255, 255, 0.18);
+      background: #f4f6fb;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.24);
     }
 
     .landing-btn--large {
@@ -186,23 +196,25 @@ import { environment } from '../../environments/environment';
       color: var(--landing-muted);
     }
 
-    .landing-footer a {
-      color: rgba(250, 250, 250, 0.88);
+    .landing-footer a,
+    .landing-version-contact a {
+      color: rgba(255, 255, 255, 0.9);
       font-size: 0.875rem;
       font-weight: 500;
       text-decoration: none;
       transition: color 0.15s ease;
     }
 
-    .landing-footer a:hover {
-      color: var(--landing-text);
+    .landing-footer a:hover,
+    .landing-version-contact a:hover {
+      color: #ffffff;
       text-decoration: none;
     }
 
     .landing-version-bar {
       max-width: 72rem;
       margin: 0 auto;
-      padding: var(--space-4) var(--space-5) var(--space-6);
+      padding: var(--space-5) var(--space-5) var(--space-6);
       border-top: 1px solid var(--landing-border);
       font-size: 0.6875rem;
       color: var(--landing-muted);
@@ -211,6 +223,15 @@ import { environment } from '../../environments/environment';
       flex-direction: column;
       align-items: center;
       gap: var(--space-2);
+    }
+
+    .landing-footer-logo {
+      display: block;
+      width: min(220px, 58vw);
+      height: auto;
+      margin-bottom: var(--space-2);
+      filter: brightness(0) invert(1);
+      opacity: 0.96;
     }
 
     .landing-version-bar__row {
@@ -248,19 +269,26 @@ import { environment } from '../../environments/environment';
       display: block;
     }
 
-    .landing-version-company {
+    .landing-version-company,
+    .landing-version-contact,
+    .landing-version-tagline {
       margin: 0;
-      max-width: 36rem;
+      max-width: 42rem;
+      line-height: 1.45;
+    }
+
+    .landing-version-company {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .landing-version-contact {
       font-size: 0.6875rem;
-      line-height: 1.4;
-      color: rgba(250, 250, 250, 0.78);
+      color: var(--landing-muted);
     }
 
     .landing-version-tagline {
-      margin: 0;
-      max-width: 36rem;
       font-size: 0.625rem;
-      line-height: 1.35;
       color: var(--landing-muted);
     }
   `],
