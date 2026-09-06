@@ -116,20 +116,6 @@ services:
       back:
         condition: service_started
 
-  haproxy:
-    image: haproxy:2.8-alpine
-    restart: unless-stopped
-    expose:
-      - "4202"
-    volumes:
-      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-    depends_on:
-      - front
-      - back
-      - ws-bridge
-    networks:
-      - pos2_net
-
 networks:
   pos2_net:
 
