@@ -126,7 +126,7 @@ import { LegalLinksComponent } from '../shared/legal-links.component';
           <span class="auth-foot-sep" aria-hidden="true">·</span>
           <a routerLink="/provider/register" data-testid="login-provider-register">{{ 'LANDING.REGISTER_AS_PROVIDER' | translate }}</a>
           <span class="auth-foot-sep" aria-hidden="true">·</span>
-          <a href="mailto:hello@satisfecho.de" data-testid="login-contact-us">{{ 'LANDING.CONTACT_US' | translate }}</a>
+          <a href="mailto:contato@mundodigitalsolucoes.com.br" data-testid="login-contact-us">{{ 'LANDING.CONTACT_US' | translate }}</a>
           @if (legalTermsUrl() || legalPrivacyUrl()) {
             <span class="auth-foot-sep" aria-hidden="true">·</span>
             <app-legal-links [inline]="true" [termsUrl]="legalTermsUrl()" [privacyUrl]="legalPrivacyUrl()" />
@@ -391,7 +391,6 @@ export class LoginComponent implements OnInit {
   });
   showPassword = signal(false);
 
-  /** Preserve tenant picker query param on forgot-password link. */
   get forgotPasswordQueryParams(): Record<string, string> {
     const t = this.route.snapshot.queryParamMap.get('tenant');
     return t ? { tenant: t } : {};
@@ -405,7 +404,7 @@ export class LoginComponent implements OnInit {
     this.api.getPublicTenant(tenantId).subscribe({
       next: (tenant) => {
         this.selectedTenant.set(tenant);
-        this.selectedTenantLogoUrl.set(this.api.getTenantLogoUrl(tenant.logo_filename, tenant.id));
+        this.selectedTenantLogoUrl.set(this.api.getTenantLogoUrl(tenant));
       },
       error: () => {
         this.selectedTenant.set(null);
@@ -414,121 +413,70 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  /** iOS Safari Keychain can fill inputs without updating the reactive form model. */
-  private syncLoginFieldsFromDom(): void {
-    const emailEl = document.getElementById('email') as HTMLInputElement | null;
-    const passwordEl = document.getElementById('password') as HTMLInputElement | null;
-    this.form.patchValue(
-      {
-        username: emailEl?.value ?? this.form.get('username')?.value ?? '',
-        password: passwordEl?.value ?? this.form.get('password')?.value ?? '',
-      },
-      { emitEvent: false },
-    );
-  }
-
-  onSubmit() {
-    this.syncLoginFieldsFromDom();
-    this.form.updateValueAndValidity({ emitEvent: false });
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.error.set('');
+  onSubmit(): void {
+    if (this.form.invalid) return;
     this.loading.set(true);
+    this.error.set('');
+    const raw = this.form.getRawValue();
 
-    const username = this.form.get('username')?.value ?? '';
-    const password = this.form.get('password')?.value ?? '';
-    const tenantId = this.route.snapshot.queryParams['tenant'];
-    const id = tenantId != null ? parseInt(tenantId, 10) : undefined;
-    this.api.login(username, password, isNaN(id as number) ? undefined : id).subscribe({
-      next: () => {
-        this.api.checkAuth().subscribe(user => {
-          if (user?.role === 'courier') {
-            void this.router.navigate(['/courier']);
-          } else if (user?.provider_id != null) {
-            void this.router.navigate(['/provider']);
-          } else if (user?.tenant_id != null) {
-            this.api.getSaasSubscription().subscribe({
-              next: (sub) => {
-                this.loading.set(false);
-                if (sub.enabled && !sub.has_access) {
-                  void this.router.navigate(['/paywall']);
-                } else {
-                  void this.router.navigate(['/dashboard']);
-                }
-              },
-              error: () => {
-                this.loading.set(false);
-                void this.router.navigate(['/dashboard']);
-              },
-            });
-          } else {
-            this.loading.set(false);
-            void this.router.navigate(['/dashboard']);
-          }
-        });
-      },
-      error: (err) => {
+    this.api.login(raw.username!, raw.password!).subscribe({
+      next: (result) => {
         this.loading.set(false);
-        if (err.status === 403 && err.error?.require_otp && err.error?.temp_token) {
-          this.otpTempToken.set(err.error.temp_token);
+        if (result.otp_required) {
+          this.otpTempToken.set(result.temp_token ?? null);
           this.showOtpStep.set(true);
-          this.error.set('');
-        } else if (err.status === 429) {
-          this.error.set(this.apiErr.fromHttpError(err, 'AUTH.LOGIN_RATE_LIMITED'));
-        } else {
-          this.error.set(this.apiErr.fromHttpError(err, 'AUTH.LOGIN_FAILED'));
+          return;
         }
-      },
-    });
-  }
-
-  onSubmitOtp() {
-    const token = this.otpTempToken();
-    if (!token || !this.otpCode || this.otpCode.length !== 6) return;
-    this.error.set('');
-    this.loading.set(true);
-    this.api.loginWithOtp(token, this.otpCode).subscribe({
-      next: () => {
-        this.api.checkAuth().subscribe(user => {
-          if (user?.role === 'courier') {
-            void this.router.navigate(['/courier']);
-          } else if (user?.provider_id != null) {
-            void this.router.navigate(['/provider']);
-          } else if (user?.tenant_id != null) {
-            this.api.getSaasSubscription().subscribe({
-              next: (sub) => {
-                this.loading.set(false);
-                if (sub.enabled && !sub.has_access) {
-                  void this.router.navigate(['/paywall']);
-                } else {
-                  void this.router.navigate(['/dashboard']);
-                }
-              },
-              error: () => {
-                this.loading.set(false);
-                void this.router.navigate(['/dashboard']);
-              },
-            });
-          } else {
-            this.loading.set(false);
-            void this.router.navigate(['/dashboard']);
-          }
-        });
+        this.finishLogin();
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(this.apiErr.fromHttpError(err, 'API_ERRORS.INVALID_OTP_CODE'));
-      }
+        this.error.set(this.apiErr.getMessage(err));
+      },
     });
   }
 
-  backToPassword() {
+  onSubmitOtp(): void {
+    const tempToken = this.otpTempToken();
+    if (!tempToken || !this.otpCode || this.otpCode.length !== 6) return;
+    this.loading.set(true);
+    this.error.set('');
+    this.api.verifyOtp(tempToken, this.otpCode).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.finishLogin();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(this.apiErr.getMessage(err));
+      },
+    });
+  }
+
+  backToPassword(): void {
     this.showOtpStep.set(false);
     this.otpTempToken.set(null);
     this.otpCode = '';
-    this.error.set('');
+  }
+
+  private finishLogin(): void {
+    this.api.checkAuth().subscribe({
+      next: (user) => {
+        if (user?.role === 'platform_operator') {
+          this.router.navigate(['/platform']);
+          return;
+        }
+        if (user?.role === 'courier') {
+          this.router.navigate(['/courier']);
+          return;
+        }
+        if (user?.provider_id != null) {
+          this.router.navigate(['/provider']);
+          return;
+        }
+        this.router.navigate(['/dashboard']);
+      },
+      error: () => this.router.navigate(['/dashboard']),
+    });
   }
 }
