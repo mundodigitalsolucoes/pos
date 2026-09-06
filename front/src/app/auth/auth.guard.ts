@@ -8,6 +8,9 @@ export const authGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
 
   const redirectForRole = (user: { role?: string; provider_id?: number | null } | null) => {
+    if (user?.role === 'platform_operator') {
+      return router.createUrlTree(['/platform']);
+    }
     if (user?.role === 'courier') {
       return router.createUrlTree(['/courier']);
     }
@@ -30,7 +33,7 @@ export const authGuard: CanActivateFn = (route, state) => {
     if (url === '/paywall' || url.startsWith('/paywall/')) {
       return of(true);
     }
-    if (user.tenant_id == null || user.role === 'platform_operator') {
+    if (user.tenant_id == null) {
       return of(true);
     }
     return apiService.getSaasSubscription().pipe(
