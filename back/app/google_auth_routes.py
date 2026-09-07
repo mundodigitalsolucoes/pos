@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from . import models, security
@@ -72,6 +73,61 @@ def _issue_session_cookies(user: models.User) -> JSONResponse:
     return response
 
 
+def _get_stored_google_subject(session: Session, user_id: int) -> str | None:
+    result = session.execute(
+        text('SELECT google_subject FROM "user" WHERE id = :user_id'),
+        {"user_id": user_id},
+    ).first()
+    if not result:
+        return None
+    return result[0]
+
+
+def _link_google_identity(
+    session: Session,
+    user: models.User,
+    subject: str,
+    full_name: str | None,
+) -> None:
+    session.execute(
+        text(
+            'UPDATE "user" '
+            'SET google_subject = :subject, auth_provider = :provider, '
+            'full_name = COALESCE(full_name, :full_name) '
+            'WHERE id = :user_id'
+        ),
+        {
+            "subject": subject,
+            "provider": "google",
+            "full_name": full_name,
+            "user_id": user.id,
+        },
+    )
+    session.commit()
+    if not user.full_name and full_name:
+        user.full_name = full_name
+
+
+def _record_login_event(session: Session, user: models.User) -> None:
+    session.add(
+        models.LoginEvent(
+            user_id=user.id,
+            role=user.role,
+            tenant_id=user.tenant_id,
+            provider_id=user.provider_id,
+            login_scope="tenant",
+        )
+    )
+    session.commit()
+
+
+@router.get("/google/config")
+def google_auth_config() -> dict:
+    """Public browser configuration. A Google OAuth client ID is not a secret."""
+    client_id = settings.google_client_id.strip()
+    return {"enabled": bool(client_id), "client_id": client_id}
+
+
 @router.post("/google")
 def login_with_google(
     request: Request,
@@ -102,24 +158,43 @@ def login_with_google(
                 "message": "No MDS Food account exists for this Google email",
                 "email": identity.email,
                 "full_name": identity.full_name,
-                "google_subject": identity.subject,
             },
         )
 
-    stored_subject = getattr(user, "google_subject", None)
+    # Google sign-in on this endpoint is intentionally tenant-only. Platform and
+    # provider identities remain isolated from the restaurant login surface.
+    if (
+        user.tenant_id is None
+        or user.provider_id is not None
+        or user.role == models.UserRole.platform_operator
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Google sign-in is not available for this account type",
+        )
+
+    stored_subject = _get_stored_google_subject(session, int(user.id))
     if stored_subject and stored_subject != identity.subject:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This account is linked to another Google identity",
         )
 
-    if hasattr(user, "google_subject") and not stored_subject:
-        user.google_subject = identity.subject
-        user.auth_provider = "google"
-        if not user.full_name and identity.full_name:
-            user.full_name = identity.full_name
-        session.add(user)
-        session.commit()
-        session.refresh(user)
+    if not stored_subject:
+        _link_google_identity(session, user, identity.subject, identity.full_name)
 
+    # Preserve MDS Food TOTP as a second factor even when Google authenticated
+    # the primary identity.
+    if getattr(user, "otp_enabled", False) and getattr(user, "otp_secret", None):
+        temp_token = security.create_otp_pending_token(_token_data_for_user(user))
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={
+                "detail": "OTP required",
+                "require_otp": True,
+                "temp_token": temp_token,
+            },
+        )
+
+    _record_login_event(session, user)
     return _issue_session_cookies(user)
