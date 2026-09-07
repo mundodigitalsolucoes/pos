@@ -1,12 +1,11 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { contactEmailValidator } from '../shared/contact-validators';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { ApiService } from '../services/api.service';
 import { ApiErrorMessageService } from '../services/api-error-message.service';
-import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LegalLinksComponent } from '../shared/legal-links.component';
 
 interface StarterProductState {
@@ -23,6 +22,41 @@ interface OnboardedProduct {
   image_filename: string | null;
 }
 
+interface GoogleCredentialResponse {
+  credential?: string;
+}
+
+interface GoogleIdentityApi {
+  accounts: {
+    id: {
+      initialize: (options: {
+        client_id: string;
+        callback: (response: GoogleCredentialResponse) => void;
+        auto_select?: boolean;
+        cancel_on_tap_outside?: boolean;
+      }) => void;
+      renderButton: (
+        parent: HTMLElement,
+        options: {
+          type?: 'standard' | 'icon';
+          theme?: 'outline' | 'filled_blue' | 'filled_black';
+          size?: 'large' | 'medium' | 'small';
+          text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
+          shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+          width?: number;
+          locale?: string;
+        },
+      ) => void;
+    };
+  };
+}
+
+declare global {
+  interface Window {
+    google?: GoogleIdentityApi;
+  }
+}
+
 const STARTER_DEFAULTS: StarterProductState[] = [
   { name: 'Coffee', enabled: true, priceCents: 250, defaultPriceCents: 250 },
   { name: 'Coca Cola', enabled: true, priceCents: 300, defaultPriceCents: 300 },
@@ -36,25 +70,34 @@ const STARTER_DEFAULTS: StarterProductState[] = [
     ReactiveFormsModule,
     RouterLink,
     TranslateModule,
-    LanguagePickerComponent,
     LegalLinksComponent,
     QRCodeComponent,
   ],
   template: `
     <div class="auth-page">
       <div class="auth-card" [class.auth-card--wide]="step() > 0">
+        <div class="brand-wrap">
+          <img src="/logo-mds-food-header.png" alt="MDS Food" class="brand-logo">
+        </div>
+
         <div class="auth-header">
           <div class="auth-header-row">
             <div>
               <h1>{{ 'AUTH.SIGNUP_TITLE' | translate }}</h1>
               <p>{{ stepTitle() }}</p>
             </div>
-            <app-language-picker></app-language-picker>
           </div>
         </div>
 
         @if (step() === 0) {
           <div class="signup-intro">
+            @if (googleEnabled()) {
+              <div class="google-signup-block">
+                <div id="google-signup-button" class="google-button"></div>
+                <div class="auth-divider"><span>ou</span></div>
+              </div>
+            }
+
             <p class="signup-intro-lead">{{ 'AUTH.SIGNUP_INTRO_LEAD' | translate }}</p>
             <ol class="signup-steps-list">
               <li>
@@ -70,6 +113,9 @@ const STARTER_DEFAULTS: StarterProductState[] = [
                 <span>{{ 'AUTH.SIGNUP_STEP3_DESC' | translate }}</span>
               </li>
             </ol>
+            @if (error()) {
+              <div class="error-banner">{{ error() }}</div>
+            }
             <button type="button" class="btn-submit" (click)="step.set(1)">
               {{ 'AUTH.SIGNUP_GET_STARTED' | translate }}
             </button>
@@ -81,6 +127,13 @@ const STARTER_DEFAULTS: StarterProductState[] = [
             <p class="register-explanation-title">{{ 'AUTH.REGISTER_WHO_IS_THIS_FOR' | translate }}</p>
             <p class="register-explanation-guests">{{ 'AUTH.REGISTER_GUEST_HINT' | translate }}</p>
           </div>
+
+          @if (googlePrefill()) {
+            <div class="google-linked-notice">
+              <strong>Conta Google selecionada</strong>
+              <span>{{ accountForm.get('email')?.value }}</span>
+            </div>
+          }
 
           <form [formGroup]="accountForm" (ngSubmit)="submitAccount()">
             <div class="form-group">
@@ -140,6 +193,7 @@ const STARTER_DEFAULTS: StarterProductState[] = [
                 id="email"
                 type="email"
                 formControlName="email"
+                [readonly]="googlePrefill()"
                 [placeholder]="translate.instant('AUTH.EMAIL_PLACEHOLDER')"
                 autocomplete="email"
               >
@@ -159,6 +213,9 @@ const STARTER_DEFAULTS: StarterProductState[] = [
                   {{ showPassword() ? ('AUTH.HIDE_PASSWORD' | translate) : ('AUTH.SHOW_PASSWORD' | translate) }}
                 </button>
               </div>
+              @if (googlePrefill()) {
+                <small class="field-hint">Defina uma senha de recuperação para também poder entrar sem o Google.</small>
+              }
             </div>
 
             <div class="form-group">
@@ -323,13 +380,26 @@ const STARTER_DEFAULTS: StarterProductState[] = [
       max-width: 520px;
     }
 
+    .brand-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--space-5);
+    }
+
+    .brand-logo {
+      display: block;
+      width: min(260px, 78%);
+      height: auto;
+    }
+
     .auth-header {
       margin-bottom: var(--space-6);
+      text-align: center;
     }
 
     .auth-header-row {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: flex-start;
       gap: var(--space-4);
     }
@@ -344,6 +414,55 @@ const STARTER_DEFAULTS: StarterProductState[] = [
     .auth-header p {
       color: var(--color-text-muted);
       font-size: 0.9375rem;
+    }
+
+    .google-signup-block {
+      margin-bottom: var(--space-5);
+    }
+
+    .google-button {
+      min-height: 44px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin: var(--space-4) 0;
+      color: var(--color-text-muted);
+      font-size: 0.8125rem;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      height: 1px;
+      flex: 1;
+      background: var(--color-border);
+    }
+
+    .google-linked-notice {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      margin-bottom: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-bg);
+    }
+
+    .google-linked-notice strong {
+      color: var(--color-text);
+      font-size: 0.875rem;
+    }
+
+    .google-linked-notice span {
+      color: var(--color-text-muted);
+      font-size: 0.8125rem;
+      overflow-wrap: anywhere;
     }
 
     .signup-intro-lead {
@@ -412,6 +531,11 @@ const STARTER_DEFAULTS: StarterProductState[] = [
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       font-size: 1rem;
+    }
+
+    .form-group input[readonly] {
+      background: var(--color-bg);
+      color: var(--color-text-muted);
     }
 
     .field-hint {
@@ -618,6 +742,7 @@ export class RegisterComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(ApiService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   translate = inject(TranslateService);
   private apiErr = inject(ApiErrorMessageService);
 
@@ -634,6 +759,9 @@ export class RegisterComponent implements OnInit {
   onboardedProducts = signal<OnboardedProduct[]>([]);
   pendingPhotos = new Map<number, File>();
   paywallEnabled = signal(false);
+  googleEnabled = signal(false);
+  googleClientId = signal('');
+  googlePrefill = signal(false);
 
   accountForm = this.fb.group(
     {
@@ -663,6 +791,120 @@ export class RegisterComponent implements OnInit {
     this.api.getSaasConfig().subscribe({
       next: (c) => this.paywallEnabled.set(!!c.enabled),
       error: () => this.paywallEnabled.set(false),
+    });
+    this.applyGooglePrefillFromQuery();
+    this.loadGoogleButton();
+  }
+
+  private applyGooglePrefillFromQuery(): void {
+    const email = this.route.snapshot.queryParamMap.get('google_email')?.trim() ?? '';
+    const fullName = this.route.snapshot.queryParamMap.get('google_name')?.trim() ?? '';
+    if (!email) return;
+    this.googlePrefill.set(true);
+    this.accountForm.patchValue({
+      email,
+      full_name: fullName || this.accountForm.get('full_name')?.value || '',
+    });
+    this.step.set(1);
+  }
+
+  private loadGoogleButton(): void {
+    this.api.getGoogleAuthConfig().subscribe({
+      next: (config) => {
+        const clientId = (config.client_id ?? '').trim();
+        this.googleEnabled.set(!!config.enabled && !!clientId);
+        this.googleClientId.set(clientId);
+        if (!this.googleEnabled()) return;
+        void this.ensureGoogleScript().then(() => this.renderGoogleButton());
+      },
+      error: () => {
+        this.googleEnabled.set(false);
+        this.googleClientId.set('');
+      },
+    });
+  }
+
+  private ensureGoogleScript(): Promise<void> {
+    if (window.google?.accounts?.id) return Promise.resolve();
+    const existing = document.querySelector('script[data-mds-google-identity="true"]') as HTMLScriptElement | null;
+    if (existing) {
+      return new Promise((resolve, reject) => {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Google Identity Services failed to load')), { once: true });
+      });
+    }
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.dataset['mdsGoogleIdentity'] = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Google Identity Services failed to load'));
+      document.head.appendChild(script);
+    });
+  }
+
+  private renderGoogleButton(): void {
+    const google = window.google?.accounts?.id;
+    const clientId = this.googleClientId();
+    const parent = document.getElementById('google-signup-button');
+    if (!google || !clientId || !parent) return;
+    parent.innerHTML = '';
+    google.initialize({
+      client_id: clientId,
+      callback: (response) => this.onGoogleCredential(response),
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+    google.renderButton(parent, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'rectangular',
+      width: 360,
+      locale: 'pt-BR',
+    });
+  }
+
+  private onGoogleCredential(response: GoogleCredentialResponse): void {
+    const credential = response.credential?.trim();
+    if (!credential) return;
+    this.error.set('');
+    this.loading.set(true);
+    this.api.loginWithGoogle(credential).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        if (res?.tenant_id != null) {
+          this.tenantId.set(res.tenant_id);
+          this.api.getSaasSubscription().subscribe({
+            next: (sub) => {
+              if (sub.enabled && !sub.has_access) {
+                void this.router.navigate(['/paywall']);
+              } else {
+                void this.router.navigate(['/dashboard']);
+              }
+            },
+            error: () => void this.router.navigate(['/dashboard']),
+          });
+          return;
+        }
+        this.error.set('Não foi possível concluir o acesso com Google.');
+      },
+      error: (err) => {
+        this.loading.set(false);
+        if (err.status === 404 && err.error?.status === 'signup_required') {
+          this.googlePrefill.set(true);
+          this.accountForm.patchValue({
+            email: err.error?.email ?? '',
+            full_name: err.error?.full_name ?? '',
+          });
+          this.step.set(1);
+          return;
+        }
+        this.error.set(this.apiErr.fromHttpError(err, 'AUTH.LOGIN_FAILED'));
+      },
     });
   }
 
