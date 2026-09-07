@@ -80,6 +80,12 @@ export interface GoogleLoginResponse {
   temp_token?: string;
 }
 
+export interface GoogleLinkResponse {
+  status: string;
+  tenant_id?: number | null;
+  email?: string;
+}
+
 export interface RegisterResponse {
   status: string;
   tenant_id?: number;
@@ -254,6 +260,7 @@ export class ApiService {
   register(data:any):Observable<RegisterResponse>{let params=new HttpParams();Object.keys(data).forEach(key=>{if(data[key]!==null&&data[key]!==undefined&&data[key]!=='')params=params.set(key,data[key]);});return this.http.post<RegisterResponse>(`${this.apiUrl}/register`,null,{params});}
   getGoogleAuthConfig():Observable<GoogleAuthConfig>{return this.http.get<GoogleAuthConfig>(`${this.apiUrl}/customer/auth/google/config`);}
   loginWithGoogle(credential:string):Observable<GoogleLoginResponse>{return this.http.post<GoogleLoginResponse>(`${this.apiUrl}/customer/auth/google`,{credential},{withCredentials:true}).pipe(tap(res=>{if(res.status==='success')this.checkAuth().subscribe();}));}
+  linkGoogleAccount(credential:string):Observable<GoogleLinkResponse>{return this.http.post<GoogleLinkResponse>(`${this.apiUrl}/customer/auth/google/link`,{credential},{withCredentials:true});}
   seedOnboardingStarterProducts(products:{name:string;price_cents:number;enabled:boolean}[]):Observable<{status:string;products:{id:number;name:string;price_cents:number;image_filename:string|null}[]}>{return this.http.post<any>(`${this.apiUrl}/onboarding/starter-products`,{products});}
   getSaasConfig():Observable<SaasSubscription>{return this.http.get<SaasSubscription>(`${this.apiUrl}/saas/config`);} getSaasSubscription():Observable<SaasSubscription>{return this.http.get<SaasSubscription>(`${this.apiUrl}/saas/subscription`);} startSaasTrial(){return this.http.post<SaasSubscription>(`${this.apiUrl}/saas/start-trial`,{});} createSaasCheckoutSession(successUrl:string,cancelUrl:string){return this.http.post<{url:string}>(`${this.apiUrl}/saas/checkout-session`,{success_url:successUrl,cancel_url:cancelUrl});} confirmSaasCheckout(sessionId:string){return this.http.post<SaasSubscription>(`${this.apiUrl}/saas/confirm-checkout`,{session_id:sessionId});}
   login(username:string,password:string,tenantId?:number,scope?:'tenant'|'provider'|'courier'|'platform'):Observable<any>{let queryParams=new HttpParams();if(scope==='provider')queryParams=queryParams.set('scope','provider');else if(scope==='courier')queryParams=queryParams.set('scope','courier');else if(scope==='platform')queryParams=queryParams.set('scope','platform');else if(tenantId!=null)queryParams=queryParams.set('tenant_id',tenantId.toString());const body=new HttpParams().set('username',username).set('password',password).toString();return this.http.post<any>(`${this.apiUrl}/token`,body,{params:queryParams,headers:{'Content-Type':'application/x-www-form-urlencoded'}}).pipe(tap(()=>this.checkAuth().subscribe()));}
