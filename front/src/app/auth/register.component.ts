@@ -762,6 +762,7 @@ export class RegisterComponent implements OnInit {
   googleEnabled = signal(false);
   googleClientId = signal('');
   googlePrefill = signal(false);
+  googleCredential = signal<string | null>(null);
 
   accountForm = this.fb.group(
     {
@@ -871,12 +872,14 @@ export class RegisterComponent implements OnInit {
   private onGoogleCredential(response: GoogleCredentialResponse): void {
     const credential = response.credential?.trim();
     if (!credential) return;
+    this.googleCredential.set(credential);
     this.error.set('');
     this.loading.set(true);
     this.api.loginWithGoogle(credential).subscribe({
       next: (res) => {
         this.loading.set(false);
         if (res?.tenant_id != null) {
+          this.googleCredential.set(null);
           this.tenantId.set(res.tenant_id);
           this.api.getSaasSubscription().subscribe({
             next: (sub) => {
@@ -903,6 +906,7 @@ export class RegisterComponent implements OnInit {
           this.step.set(1);
           return;
         }
+        this.googleCredential.set(null);
         this.error.set(this.apiErr.fromHttpError(err, 'AUTH.LOGIN_FAILED'));
       },
     });
@@ -986,6 +990,27 @@ export class RegisterComponent implements OnInit {
     void this.router.navigate(['/dashboard']);
   }
 
+  private continueAfterAccountLogin(): void {
+    const credential = this.googleCredential();
+    if (!credential) {
+      this.loading.set(false);
+      this.step.set(2);
+      return;
+    }
+
+    this.api.linkGoogleAccount(credential).subscribe({
+      next: () => {
+        this.googleCredential.set(null);
+        this.loading.set(false);
+        this.step.set(2);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(this.apiErr.fromHttpError(err, 'COMMON.API_REQUEST_FAILED'));
+      },
+    });
+  }
+
   submitAccount(): void {
     if (!this.accountForm.valid) return;
     this.error.set('');
@@ -1000,8 +1025,7 @@ export class RegisterComponent implements OnInit {
         this.tenantId.set(res.tenant_id ?? null);
         this.api.login(email, password).subscribe({
           next: () => {
-            this.loading.set(false);
-            this.step.set(2);
+            this.continueAfterAccountLogin();
           },
           error: (err) => {
             this.loading.set(false);
