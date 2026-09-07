@@ -18,21 +18,19 @@
   <meta name="twitter:title" content="MDS Food — Gestão, pedidos e experiência digital para restaurantes">
   <meta name="twitter:description" content="Cardápio digital, pedidos, reservas, mesas, cozinha, estoque, relatórios e gestão para restaurantes em uma única plataforma.">
   <meta name="twitter:image" content="https://mdsfood.testesite.tech/og-image.png">
-  <link rel="icon" type="image/png" href="/favicon.png?v=3.0.0">
-  <link rel="apple-touch-icon" href="/favicon.png?v=3.0.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-negativa.png?v=4.0.0">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-negativa.png?v=4.0.0">
+  <link rel="shortcut icon" href="/favicon-negativa.png?v=4.0.0">
+  <link rel="apple-touch-icon" href="/favicon-negativa.png?v=4.0.0">
+  <meta name="theme-color" content="#2f3453">
   <script src="/runtime-config.js"></script>
   <script>
-    // Runtime configuration from environment variables
-    // Use relative URLs when behind proxy, or absolute URLs if specified
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     window.__API_URL__ = window.__API_URL__ || `${protocol}//${host}/api`;
     window.__WS_URL__ = window.__WS_URL__ || `${wsProtocol}//${host}/ws`;
     window.__STRIPE_PUBLISHABLE_KEY__ = window.__STRIPE_PUBLISHABLE_KEY__ || 'pk_test_...';
-    // Google Analytics (GA4). Prefer window.__GA_MEASUREMENT_ID__ from /runtime-config.js
-    // (written by docker entrypoints from GOOGLE_ANALYTICS_MEASUREMENT_ID / .secrets).
-    // Never commit a real measurement ID.
     window.__GA_MEASUREMENT_ID__ = window.__GA_MEASUREMENT_ID__ || '';
   </script>
   <script>
