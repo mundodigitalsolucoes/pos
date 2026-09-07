@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -13,6 +15,7 @@ from .google_auth import (
     GoogleTokenValidationError,
     verify_google_id_token,
 )
+from .rate_limits import limiter, rate_limit_key_user
 from .settings import settings
 
 
@@ -41,11 +44,11 @@ def _issue_session_cookies(user: models.User) -> JSONResponse:
     token_data = _token_data_for_user(user)
     access_token = security.create_access_token(
         data=token_data,
-        expires_delta=security.timedelta(minutes=settings.access_token_expire_minutes),
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
     refresh_token = security.create_refresh_token(
         data=token_data,
-        expires_delta=security.timedelta(days=settings.refresh_token_expire_days),
+        expires_delta=timedelta(days=settings.refresh_token_expire_days),
     )
 
     response = JSONResponse(
@@ -87,12 +90,29 @@ def _get_stored_google_subject(session: Session, user_id: int) -> str | None:
     return result[0]
 
 
+def _get_user_by_google_subject(session: Session, subject: str) -> models.User | None:
+    row = session.execute(
+        text('SELECT id FROM "user" WHERE google_subject = :subject LIMIT 1'),
+        {"subject": subject},
+    ).first()
+    if not row:
+        return None
+    return session.get(models.User, int(row[0]))
+
+
 def _link_google_identity(
     session: Session,
     user: models.User,
     subject: str,
     full_name: str | None,
 ) -> None:
+    existing = _get_user_by_google_subject(session, subject)
+    if existing and existing.id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Google identity is already linked to another MDS Food account",
+        )
+
     session.execute(
         text(
             'UPDATE "user" '
@@ -148,7 +168,12 @@ def google_auth_config() -> dict:
 
 
 @router.post("/google/link")
+@limiter.limit(
+    f"{getattr(settings, 'rate_limit_admin_per_minute', 30)}/minute",
+    key_func=rate_limit_key_user,
+)
 def link_google_identity_for_current_user(
+    request: Request,
     body: GoogleLinkBody,
     current_user: models.User = Depends(security.get_current_user),
     session: Session = Depends(get_session),
@@ -189,6 +214,9 @@ def link_google_identity_for_current_user(
 
 
 @router.post("/google")
+@limiter.limit(
+    f"{getattr(settings, 'rate_limit_login_per_15min', 5)}/15 minutes"
+)
 def login_with_google(
     request: Request,
     body: GoogleLoginBody,
@@ -229,8 +257,17 @@ def login_with_google(
             detail="This account is linked to another Google identity",
         )
 
+    # Do not silently bind an existing password account based only on matching
+    # email. Linking is allowed only after an authenticated session proves
+    # control of the MDS Food account via /google/link.
     if not stored_subject:
-        _link_google_identity(session, user, identity.subject, identity.full_name)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "google_link_required",
+                "message": "Sign in with your password once to link this Google account",
+            },
+        )
 
     # Preserve MDS Food TOTP as a second factor even when Google authenticated
     # the primary identity.
