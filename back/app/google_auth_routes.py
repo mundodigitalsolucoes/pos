@@ -23,6 +23,10 @@ class GoogleLoginBody(BaseModel):
     credential: str = Field(min_length=1)
 
 
+class GoogleLinkBody(BaseModel):
+    credential: str = Field(min_length=1)
+
+
 def _token_data_for_user(user: models.User) -> dict:
     return {
         "sub": user.email,
@@ -121,21 +125,9 @@ def _record_login_event(session: Session, user: models.User) -> None:
     session.commit()
 
 
-@router.get("/google/config")
-def google_auth_config() -> dict:
-    """Public browser configuration. A Google OAuth client ID is not a secret."""
-    client_id = settings.google_client_id.strip()
-    return {"enabled": bool(client_id), "client_id": client_id}
-
-
-@router.post("/google")
-def login_with_google(
-    request: Request,
-    body: GoogleLoginBody,
-    session: Session = Depends(get_session),
-) -> JSONResponse:
+def _verify_google_credential(credential: str):
     try:
-        identity = verify_google_id_token(body.credential, settings.google_client_id)
+        return verify_google_id_token(credential, settings.google_client_id)
     except GoogleAuthConfigurationError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -146,6 +138,63 @@ def login_with_google(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(exc),
         ) from exc
+
+
+@router.get("/google/config")
+def google_auth_config() -> dict:
+    """Public browser configuration. A Google OAuth client ID is not a secret."""
+    client_id = settings.google_client_id.strip()
+    return {"enabled": bool(client_id), "client_id": client_id}
+
+
+@router.post("/google/link")
+def link_google_identity_for_current_user(
+    body: GoogleLinkBody,
+    current_user: models.User = Depends(security.get_current_user),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Bind a verified Google identity to the currently authenticated tenant user."""
+    if (
+        current_user.tenant_id is None
+        or current_user.provider_id is not None
+        or current_user.role == models.UserRole.platform_operator
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Google linking is not available for this account type",
+        )
+
+    identity = _verify_google_credential(body.credential)
+    if identity.email.strip().lower() != current_user.email.strip().lower():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Google email does not match the signed-in MDS Food account",
+        )
+
+    stored_subject = _get_stored_google_subject(session, int(current_user.id))
+    if stored_subject and stored_subject != identity.subject:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This account is linked to another Google identity",
+        )
+
+    if not stored_subject:
+        _link_google_identity(session, current_user, identity.subject, identity.full_name)
+
+    return {
+        "status": "linked",
+        "email": current_user.email,
+        "tenant_id": current_user.tenant_id,
+    }
+
+
+@router.post("/google")
+def login_with_google(
+    request: Request,
+    body: GoogleLoginBody,
+    session: Session = Depends(get_session),
+) -> JSONResponse:
+    identity = _verify_google_credential(body.credential)
 
     user = session.exec(
         select(models.User).where(models.User.email == identity.email)
