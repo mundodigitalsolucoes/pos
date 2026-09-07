@@ -57,6 +57,10 @@ class Settings(BaseSettings):
         default=7, validation_alias="REFRESH_TOKEN_EXPIRE_DAYS"
     )
 
+    # Google Identity Services (staff/owner login and signup).
+    # Client ID is public OAuth metadata; no client secret is required when validating GIS ID tokens.
+    google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
+
     stripe_secret_key: str = Field(default="", validation_alias="STRIPE_SECRET_KEY")
     stripe_publishable_key: str = Field(
         default="", validation_alias="STRIPE_PUBLISHABLE_KEY"
