@@ -19,6 +19,7 @@ from . import security
 from .api_errors import api_error_payload
 from .contact_validation import normalize_email_address
 from .db import get_session
+from .google_auth_routes import router as google_auth_router
 from .language_service import normalize_language_code
 from .messages import get_message
 from .rate_limits import limiter
@@ -27,6 +28,7 @@ from .settings import settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+router.include_router(google_auth_router)
 
 _VERIFICATION_TOKEN_MAX_AGE = timedelta(hours=48)
 _MIN_PASSWORD_LEN = 8
