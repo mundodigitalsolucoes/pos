@@ -241,10 +241,11 @@ export class LoginComponent implements OnInit {
           });
           return;
         }
-        if (err.status === 409 && err.error?.status === 'google_link_required') {
+        const detail = err.error?.detail;
+        if (err.status === 409 && detail?.code === 'google_link_required') {
           this.pendingGoogleCredential = credential;
           this.googleLinkRequired.set(true);
-          this.form.patchValue({ username: err.error?.email ?? '' }, { emitEvent: false });
+          this.form.patchValue({ username: detail?.email ?? err.error?.email ?? '' }, { emitEvent: false });
           this.error.set('');
           return;
         }
