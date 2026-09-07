@@ -219,7 +219,13 @@ export class LoginComponent implements OnInit {
       error: (err) => {
         this.loading.set(false);
         if (err.status === 404 && err.error?.status === 'signup_required') {
-          void this.router.navigate(['/register'], { queryParams: { google: '1', email: err.error?.email ?? '', name: err.error?.full_name ?? '' } });
+          void this.router.navigate(['/register'], {
+            queryParams: {
+              google: '1',
+              google_email: err.error?.email ?? '',
+              google_name: err.error?.full_name ?? '',
+            },
+          });
           return;
         }
         if (err.status === 403 && err.error?.require_otp && err.error?.temp_token) {
