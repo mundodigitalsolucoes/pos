@@ -4,7 +4,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { ApiService, PublicTableLookupChoice, TenantSummary } from '../services/api.service';
 import { FormsModule } from '@angular/forms';
-import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LandingSiteFooterComponent } from '../shared/landing-site-footer.component';
 import { ApiErrorMessageService } from '../services/api-error-message.service';
 
@@ -14,12 +13,12 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [RouterLink, TranslateModule, FormsModule, LanguagePickerComponent, QRCodeComponent, LandingSiteFooterComponent],
+  imports: [RouterLink, TranslateModule, FormsModule, QRCodeComponent, LandingSiteFooterComponent],
   template: `
     <div class="landing-page">
       <nav class="landing-nav" aria-label="Main">
         <a routerLink="/" class="landing-nav__brand">
-          <img src="/logo-mds-food.png" alt="MDS Food" class="landing-nav__logo" />
+          <img src="/logo-mds-food-header.png" alt="MDS Food" class="landing-nav__logo" />
         </a>
         <div class="landing-nav__links">
           <a routerLink="/features" class="landing-nav__link">{{ 'LANDING.NAV_FEATURES' | translate }}</a>
@@ -29,7 +28,6 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
           <a href="#demo" class="landing-nav__link">{{ 'LANDING.NAV_DEMO' | translate }}</a>
         </div>
         <div class="landing-nav__actions">
-          <app-language-picker class="landing-language-picker"></app-language-picker>
           <a routerLink="/login" class="landing-nav__login">{{ 'LANDING.LOGIN' | translate }}</a>
           <a routerLink="/register" class="landing-nav__cta">{{ 'LANDING.CTA_CREATE_QR_MENU' | translate }}</a>
         </div>
@@ -42,7 +40,7 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
               <span class="landing-badge__dot" aria-hidden="true"></span>
               {{ 'LANDING.BADGE' | translate }}
             </p>
-            <h1 class="landing-hero__title">{{ 'LANDING.TITLE' | translate }}</h1>
+            <h1 class="landing-hero__title">Soluções para seu restaurante vender mais.</h1>
             <p class="landing-hero__subtitle">{{ 'LANDING.SUBTITLE' | translate }}</p>
             <div class="landing-hero__actions">
               <a routerLink="/register" class="landing-btn landing-btn--gold">{{ 'LANDING.CTA_CREATE_QR_MENU' | translate }}</a>
@@ -179,42 +177,42 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
     }
 
     .landing-nav {
-      display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap;
-      max-width:72rem; margin:0 auto; padding:1.35rem var(--space-5); background:transparent;
+      display:flex; align-items:center; justify-content:space-between; gap:1.5rem;
+      max-width:72rem; margin:0 auto; padding:1rem var(--space-5); background:var(--cream); flex-wrap:nowrap;
     }
-    .landing-nav__brand { display:inline-flex; align-items:center; text-decoration:none; }
-    .landing-nav__logo { width:264px; max-height:112px; height:auto; object-fit:contain; object-position:left center; }
-    .landing-nav__links { display:none; align-items:center; gap:var(--space-5); }
-    .landing-nav__link,.landing-nav__login { color:var(--navy); font-size:.9375rem; font-weight:600; text-decoration:none; }
+    .landing-nav__brand { display:inline-flex; align-items:center; flex:0 0 auto; text-decoration:none; }
+    .landing-nav__logo { width:300px; max-height:96px; height:auto; object-fit:contain; object-position:left center; }
+    .landing-nav__links { display:flex; align-items:center; justify-content:center; gap:1.35rem; flex:1 1 auto; min-width:0; }
+    .landing-nav__link,.landing-nav__login { color:var(--navy); font-size:.92rem; font-weight:700; text-decoration:none; white-space:nowrap; }
     .landing-nav__link:hover,.landing-nav__login:hover { color:var(--blue); text-decoration:none; }
-    .landing-nav__actions { display:flex; align-items:center; gap:var(--space-2); margin-left:auto; }
-    .landing-nav__login { display:none; padding:var(--space-2) var(--space-3); }
-    .landing-nav__cta { display:inline-flex; align-items:center; justify-content:center; padding:.72rem 1.15rem; border-radius:999px; background:var(--gold); color:#fff; border:1px solid var(--gold); font-weight:800; text-decoration:none; }
+    .landing-nav__actions { display:flex; align-items:center; gap:.65rem; flex:0 0 auto; }
+    .landing-nav__login { display:inline-flex; padding:.65rem .75rem; }
+    .landing-nav__cta { display:inline-flex; align-items:center; justify-content:center; padding:.72rem 1.15rem; border-radius:999px; background:var(--gold); color:#fff; border:1px solid var(--gold); font-weight:800; text-decoration:none; white-space:nowrap; }
     .landing-nav__cta:hover { background:var(--gold-hover); border-color:var(--gold-hover); text-decoration:none; }
-    @media(min-width:768px){ .landing-nav__links{display:flex}.landing-nav__login{display:inline-flex} }
+    @media(max-width:980px){ .landing-nav{flex-wrap:wrap}.landing-nav__links{order:3;width:100%;justify-content:flex-start;overflow-x:auto}.landing-nav__logo{width:240px} }
 
     .landing-hero {
-      background:var(--cream);
+      background:var(--navy);
       border-top:1px solid rgba(47,52,83,.08);
       border-bottom:1px solid rgba(47,52,83,.08);
     }
-    .landing-hero__content { max-width:72rem; margin:0 auto; padding:4.5rem var(--space-5) 5rem; display:grid; grid-template-columns:1fr; gap:var(--space-8); align-items:center; }
+    .landing-hero__content { max-width:72rem; margin:0 auto; padding:4.75rem var(--space-5) 5rem; display:grid; grid-template-columns:1fr; gap:var(--space-8); align-items:center; }
     @media(min-width:960px){ .landing-hero__content{grid-template-columns:1.08fr .92fr} }
-    .landing-badge { display:inline-flex; align-items:center; gap:var(--space-2); margin:0 0 var(--space-5); padding:.45rem .85rem; border-radius:999px; background:#fff; border:1px solid rgba(55,75,137,.14); color:var(--navy); font-size:.8125rem; font-weight:700; box-shadow:0 8px 28px rgba(47,52,83,.06); }
+    .landing-badge { display:inline-flex; align-items:center; gap:var(--space-2); margin:0 0 var(--space-5); padding:.45rem .85rem; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); color:#fff; font-size:.8125rem; font-weight:700; }
     .landing-badge__dot { width:8px; height:8px; border-radius:50%; background:var(--gold); }
-    .landing-hero__title { margin:0 0 var(--space-4); max-width:780px; font-size:clamp(2.7rem,6vw,4.9rem); line-height:.98; letter-spacing:-.045em; color:var(--navy); font-weight:800; }
-    .landing-hero__subtitle { margin:0 0 var(--space-6); max-width:36rem; font-size:clamp(1rem,2.1vw,1.2rem); line-height:1.65; color:var(--muted); }
+    .landing-hero__title { margin:0 0 var(--space-4); max-width:780px; font-size:clamp(2.7rem,6vw,4.9rem); line-height:.98; letter-spacing:-.045em; color:#fff; font-weight:800; }
+    .landing-hero__subtitle { margin:0 0 var(--space-6); max-width:36rem; font-size:clamp(1rem,2.1vw,1.2rem); line-height:1.65; color:rgba(255,255,255,.78); }
     .landing-hero__actions { display:flex; flex-wrap:wrap; gap:var(--space-3); }
     .landing-btn { display:inline-flex; align-items:center; justify-content:center; padding:.9rem 1.4rem; border-radius:999px; font-size:.95rem; font-weight:800; text-decoration:none; transition:.15s ease; }
     .landing-btn:hover { transform:translateY(-1px); text-decoration:none; }
     .landing-btn--gold { background:var(--gold); color:#fff; box-shadow:0 12px 30px rgba(214,169,47,.24); }
     .landing-btn--gold:hover { background:var(--gold-hover); }
-    .landing-btn--blue { background:var(--blue); color:#fff; box-shadow:0 12px 30px rgba(55,75,137,.18); }
+    .landing-btn--blue { background:var(--blue); color:#fff; box-shadow:0 12px 30px rgba(55,75,137,.2); }
     .landing-btn--blue:hover { background:#2f427b; }
 
     .landing-hero__visual { display:flex; justify-content:center; perspective:1200px; }
-    .landing-phone { width:min(100%,300px); padding:12px; border-radius:38px; background:linear-gradient(160deg,#fff,#e8eaf4); border:1px solid rgba(47,52,83,.14); box-shadow:0 28px 70px rgba(47,52,83,.18); transform:rotateY(-10deg) rotateX(6deg); }
-    .landing-phone__screen { border-radius:28px; overflow:hidden; background:linear-gradient(180deg,#2f3453 0%,#202642 100%); min-height:360px; display:flex; flex-direction:column; }
+    .landing-phone { width:min(100%,300px); padding:12px; border-radius:38px; background:linear-gradient(160deg,#fff,#e8eaf4); border:1px solid rgba(255,255,255,.18); box-shadow:0 28px 70px rgba(0,0,0,.24); transform:rotateY(-10deg) rotateX(6deg); }
+    .landing-phone__screen { border-radius:28px; overflow:hidden; background:linear-gradient(180deg,#202642 0%,#15192d 100%); min-height:360px; display:flex; flex-direction:column; }
     .landing-phone__header{display:flex;gap:6px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
     .landing-phone__dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.28)}
     .landing-phone__menu{padding:20px 18px 12px;display:flex;flex-direction:column;gap:10px}
@@ -231,10 +229,10 @@ const LANDING_DEMO_TABLE_NAME = 'Take Away';
     .landing-features__all-link { color:var(--blue); font-weight:700; text-decoration:none; }
     .landing-feature-grid { list-style:none; padding:0; display:grid; grid-template-columns:1fr; gap:var(--space-4); }
     @media(min-width:768px){ .landing-feature-grid{grid-template-columns:repeat(3,1fr)} }
-    .landing-feature-card { padding:1.5rem; border-radius:20px; background:var(--cream); border:1px solid rgba(47,52,83,.08); box-shadow:0 10px 30px rgba(47,52,83,.05); }
-    .landing-feature-card__icon { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; margin-bottom:var(--space-4); border-radius:12px; background:rgba(214,169,47,.14); color:var(--gold); }
-    .landing-feature-card h3 { margin:0 0 .5rem; color:var(--navy); font-size:1rem; }
-    .landing-feature-card p { margin:0; color:var(--muted); line-height:1.55; font-size:.9rem; }
+    .landing-feature-card { padding:1.5rem; border-radius:20px; background:var(--blue); border:1px solid rgba(47,52,83,.08); box-shadow:0 12px 30px rgba(47,52,83,.12); }
+    .landing-feature-card__icon { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; margin-bottom:var(--space-4); border-radius:12px; background:rgba(214,169,47,.16); color:var(--gold); }
+    .landing-feature-card h3 { margin:0 0 .5rem; color:#fff; font-size:1rem; }
+    .landing-feature-card p { margin:0; color:rgba(255,255,255,.82); line-height:1.55; font-size:.9rem; }
 
     .landing-qr-demo { background:var(--cream); }
     .landing-qr-demo .loading,.landing-qr-demo .error,.landing-qr-demo .empty { color:var(--muted); text-align:center; }
