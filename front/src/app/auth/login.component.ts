@@ -44,7 +44,6 @@ declare global {
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-header">
-          <img src="/logo-mds-food.png" alt="MDS Food" class="auth-logo">
           <h1>{{ 'AUTH.WELCOME_BACK' | translate }}</h1>
           <p>{{ 'AUTH.SIGN_IN_ACCOUNT' | translate }}</p>
         </div>
@@ -112,9 +111,7 @@ declare global {
 
         <div class="auth-actions-foot">
           <span>{{ 'AUTH.DONT_HAVE_ACCOUNT' | translate }}</span>
-          <a routerLink="/register">{{ 'AUTH.CREATE_ACCOUNT' | translate }}</a>
-          <span class="auth-foot-sep" aria-hidden="true">·</span>
-          <a href="mailto:contato@mundodigitalsolucoes.com.br" data-testid="login-contact-us">{{ 'LANDING.CONTACT_US' | translate }}</a>
+          <a routerLink="/register">Cadastre seu restaurante</a>
           @if (legalTermsUrl() || legalPrivacyUrl()) {
             <span class="auth-foot-sep" aria-hidden="true">·</span>
             <app-legal-links [inline]="true" [termsUrl]="legalTermsUrl()" [privacyUrl]="legalPrivacyUrl()" />
@@ -127,7 +124,6 @@ declare global {
     .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:var(--space-5); background:var(--color-bg); }
     .auth-card { width:100%; max-width:420px; background:var(--color-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); padding:var(--space-8); }
     .auth-header { margin-bottom:var(--space-6); text-align:center; }
-    .auth-logo { width:210px; max-width:80%; height:auto; margin:0 auto var(--space-5); display:block; }
     .auth-header h1 { font-size:1.75rem; font-weight:600; color:var(--color-text); margin-bottom:var(--space-2); }
     .auth-header p { color:var(--color-text-muted); font-size:.9375rem; }
     .google-auth-wrap { display:flex; justify-content:center; min-height:44px; }
