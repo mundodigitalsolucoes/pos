@@ -65,10 +65,17 @@ declare global {
             <div class="auth-divider"><span>ou</span></div>
           }
 
+          @if (googleLinkRequired()) {
+            <div class="google-link-required">
+              <strong>Confirme sua conta uma vez</strong>
+              <span>Já existe uma conta MDS Food com este e-mail. Entre com sua senha abaixo para vinculá-la ao Google com segurança.</span>
+            </div>
+          }
+
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <div class="form-group">
               <label for="email">{{ 'AUTH.EMAIL' | translate }}</label>
-              <input id="email" type="email" name="username" formControlName="username" [placeholder]="translate.instant('AUTH.EMAIL_PLACEHOLDER')" autocomplete="email">
+              <input id="email" type="email" name="username" formControlName="username" [placeholder]="translate.instant('AUTH.EMAIL_PLACEHOLDER')" autocomplete="email" [readonly]="googleLinkRequired()">
               @if (form.get('username')?.touched && form.get('username')?.invalid) { <div class="field-error">{{ 'AUTH.INVALID_EMAIL' | translate }}</div> }
             </div>
 
@@ -83,7 +90,7 @@ declare global {
 
             @if (error()) { <div class="error-banner">{{ error() }}</div> }
 
-            <button type="submit" class="btn-submit" [disabled]="loading()">{{ loading() ? ('AUTH.SIGNING_IN' | translate) : ('AUTH.SIGN_IN' | translate) }}</button>
+            <button type="submit" class="btn-submit" [disabled]="loading()">{{ loading() ? ('AUTH.SIGNING_IN' | translate) : (googleLinkRequired() ? 'Entrar e vincular Google' : ('AUTH.SIGN_IN' | translate)) }}</button>
           </form>
         }
 
@@ -111,9 +118,13 @@ declare global {
     .google-button { width:100%; display:flex; justify-content:center; }
     .auth-divider { display:flex; align-items:center; gap:12px; color:var(--color-text-muted); font-size:.8125rem; margin:var(--space-4) 0; }
     .auth-divider::before,.auth-divider::after { content:''; flex:1; height:1px; background:var(--color-border); }
+    .google-link-required { display:flex; flex-direction:column; gap:.25rem; margin-bottom:var(--space-4); padding:var(--space-3) var(--space-4); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-bg); }
+    .google-link-required strong { color:var(--color-text); font-size:.9375rem; }
+    .google-link-required span { color:var(--color-text-muted); font-size:.8125rem; line-height:1.45; }
     .form-group { margin-bottom:var(--space-4); }
     .form-group label { display:block; margin-bottom:var(--space-2); font-weight:500; }
     .form-group input { width:100%; padding:var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:1rem; }
+    .form-group input[readonly] { background:var(--color-bg); color:var(--color-text-muted); }
     .input-with-toggle { position:relative; display:flex; }
     .input-with-toggle input { flex:1; padding-right:5rem; }
     .pw-toggle { position:absolute; right:var(--space-2); top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--color-text-muted); font-size:.75rem; }
@@ -149,7 +160,9 @@ export class LoginComponent implements OnInit {
   selectedTenant = signal<TenantSummary | null>(null);
   selectedTenantLogoUrl = signal<string | null>(null);
   googleEnabled = signal(false);
+  googleLinkRequired = signal(false);
   private googleClientId = '';
+  private pendingGoogleCredential: string | null = null;
 
   error = signal<string>('');
   loading = signal(false);
@@ -228,6 +241,13 @@ export class LoginComponent implements OnInit {
           });
           return;
         }
+        if (err.status === 409 && err.error?.status === 'google_link_required') {
+          this.pendingGoogleCredential = credential;
+          this.googleLinkRequired.set(true);
+          this.form.patchValue({ username: err.error?.email ?? '' }, { emitEvent: false });
+          this.error.set('');
+          return;
+        }
         if (err.status === 403 && err.error?.require_otp && err.error?.temp_token) {
           this.otpTempToken.set(err.error.temp_token);
           this.showOtpStep.set(true);
@@ -253,6 +273,25 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  private linkPendingGoogleThenFinish(): void {
+    const credential = this.pendingGoogleCredential;
+    if (!credential) {
+      this.finishAuthenticatedLogin();
+      return;
+    }
+    this.api.linkGoogleAccount(credential).subscribe({
+      next: () => {
+        this.pendingGoogleCredential = null;
+        this.googleLinkRequired.set(false);
+        this.finishAuthenticatedLogin();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(this.apiErr.fromHttpError(err, 'AUTH.LOGIN_FAILED'));
+      },
+    });
+  }
+
   private syncLoginFieldsFromDom(): void {
     const emailEl = document.getElementById('email') as HTMLInputElement | null;
     const passwordEl = document.getElementById('password') as HTMLInputElement | null;
@@ -269,7 +308,7 @@ export class LoginComponent implements OnInit {
     const tenantId = this.route.snapshot.queryParams['tenant'];
     const id = tenantId != null ? parseInt(tenantId, 10) : undefined;
     this.api.login(username, password, isNaN(id as number) ? undefined : id).subscribe({
-      next: () => this.finishAuthenticatedLogin(),
+      next: () => this.linkPendingGoogleThenFinish(),
       error: (err) => {
         this.loading.set(false);
         if (err.status === 403 && err.error?.require_otp && err.error?.temp_token) { this.otpTempToken.set(err.error.temp_token); this.showOtpStep.set(true); this.error.set(''); }
@@ -283,7 +322,7 @@ export class LoginComponent implements OnInit {
     const token = this.otpTempToken();
     if (!token || !this.otpCode || this.otpCode.length !== 6) return;
     this.error.set(''); this.loading.set(true);
-    this.api.loginWithOtp(token, this.otpCode).subscribe({ next: () => this.finishAuthenticatedLogin(), error: (err) => { this.loading.set(false); this.error.set(this.apiErr.fromHttpError(err, 'API_ERRORS.INVALID_OTP_CODE')); } });
+    this.api.loginWithOtp(token, this.otpCode).subscribe({ next: () => this.linkPendingGoogleThenFinish(), error: (err) => { this.loading.set(false); this.error.set(this.apiErr.fromHttpError(err, 'API_ERRORS.INVALID_OTP_CODE')); } });
   }
 
   backToPassword(): void {
