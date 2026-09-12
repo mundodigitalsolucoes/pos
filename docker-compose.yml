@@ -24,7 +24,8 @@ services:
       - STRIPE_CURRENCY=${STRIPE_CURRENCY:-usd}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:4200}
       - ROOT_PATH=/api
-      - DEFAULT_PHONE_COUNTRY=${DEFAULT_PHONE_COUNTRY:-BR}
+      # MDS Food currently targets Brazil. Keep backend phone parsing deterministic even if a legacy env says ES.
+      - DEFAULT_PHONE_COUNTRY=BR
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
