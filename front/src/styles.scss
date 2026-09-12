@@ -239,6 +239,15 @@ app-language-picker { display: none !important; }
 }
 /* Registration: remove explanatory notice that adds friction before the form. */
 .auth-card .register-explanation { display: none !important; }
+/* Registration: make the expected Brazilian phone format obvious before submission. */
+.auth-card .form-group:has(#phone)::after,
+.auth-card .form-group:has(#google-phone)::after {
+  content: 'Digite seu DDD + número. Ex.: (17) 99188-6725';
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: .8125rem;
+}
 .auth-header-row { justify-content: center !important; text-align: center; }
 .auth-header-row > div { width: 100%; }
 .btn-submit { background: #D6A92F !important; color: #fff !important; font-weight: 800 !important; }
