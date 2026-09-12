@@ -70,7 +70,6 @@ const STARTER_DEFAULTS: StarterProductState[] = [
   template: `
     <div class="auth-page">
       <div class="auth-card" [class.auth-card--wide]="step() > 0">
-        <div class="brand-wrap"><img src="/logo-mds-food-header.png" alt="MDS Food" class="brand-logo"></div>
         <div class="auth-header"><div class="auth-header-row"><div><h1>{{ 'AUTH.SIGNUP_TITLE' | translate }}</h1><p>{{ stepTitle() }}</p></div></div></div>
 
         @if (step() === 0) {
@@ -127,7 +126,7 @@ const STARTER_DEFAULTS: StarterProductState[] = [
           <div class="signup-complete"><p class="signup-complete-lead">{{ 'AUTH.SIGNUP_COMPLETE_LEAD' | translate }}</p>@if (tenantId()) { <div class="signup-qr-wrap"><qrcode [qrdata]="publicMenuUrl()" [width]="200" [errorCorrectionLevel]="'M'"></qrcode></div><p class="signup-menu-link"><a [href]="publicMenuUrl()" target="_blank" rel="noopener">{{ publicMenuUrl() }}</a></p> }<div class="wizard-nav wizard-nav--center"><button type="button" class="btn-submit" data-testid="signup-finish" (click)="finishSignup()">{{ finishCtaKey() | translate }}</button></div></div>
         }
 
-        <div class="auth-actions-foot"><span>{{ 'AUTH.ALREADY_HAVE_ACCOUNT' | translate }}</span><a routerLink="/login">{{ 'AUTH.SIGN_IN_LINK' | translate }}</a><span class="auth-foot-sep" aria-hidden="true">·</span><a routerLink="/provider/login" data-testid="register-provider-login">{{ 'LANDING.PROVIDER_LOGIN' | translate }}</a>@if (legalTermsUrl() || legalPrivacyUrl()) { <span class="auth-foot-sep" aria-hidden="true">·</span><app-legal-links [inline]="true" [termsUrl]="legalTermsUrl()" [privacyUrl]="legalPrivacyUrl()" /> }</div>
+        <div class="auth-actions-foot"><span>{{ 'AUTH.ALREADY_HAVE_ACCOUNT' | translate }}</span><a routerLink="/login">{{ 'AUTH.SIGN_IN_LINK' | translate }}</a>@if (legalTermsUrl() || legalPrivacyUrl()) { <span class="auth-foot-sep" aria-hidden="true">·</span><app-legal-links [inline]="true" [termsUrl]="legalTermsUrl()" [privacyUrl]="legalPrivacyUrl()" /> }</div>
       </div>
     </div>
   `,
