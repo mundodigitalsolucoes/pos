@@ -123,9 +123,9 @@ class Settings(BaseSettings):
         description="E.g. +14155238886 (Twilio sandbox) or your WhatsApp Business number",
     )
     default_phone_country: str = Field(
-        default="ES",
+        default="BR",
         validation_alias="DEFAULT_PHONE_COUNTRY",
-        description="ISO 3166-1 alpha-2 country code for normalizing phone numbers without + prefix",
+        description="ISO 3166-1 alpha-2 country code for normalizing phone numbers without + prefix (MDS Food default: BR)",
     )
     # Base URL of the public frontend (for links in emails, e.g. reservation view/change/cancel).
     # When set, reservation reminder emails include a link to /reservation?token=...
