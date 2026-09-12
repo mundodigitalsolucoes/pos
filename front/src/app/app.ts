@@ -3,7 +3,6 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { LanguageService } from './services/language.service';
 import { SeoService } from './services/seo.service';
-import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -12,28 +11,18 @@ import { environment } from '../environments/environment';
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
-  protected readonly title = signal('front');
+  protected readonly title = signal('MDS Food');
   private router = inject(Router);
   private routerSub?: Subscription;
-
-  /** Inject so LanguageService initializes at bootstrap and applies browser default language everywhere from first load. */
   private languageService = inject(LanguageService);
   private seo = inject(SeoService);
 
   ngOnInit() {
     this.seo.start();
-
-    // Set initial favicon based on current route
-    this.updateFavicon(this.router.url);
-
-    // Listen to route changes and update favicon
+    this.updateFavicon();
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe((event) => {
-        if (event instanceof NavigationEnd) {
-          this.updateFavicon(event.urlAfterRedirects);
-        }
-      });
+      .subscribe(() => this.updateFavicon());
   }
 
   ngOnDestroy() {
@@ -41,35 +30,29 @@ export class App implements OnInit, OnDestroy {
     this.routerSub?.unsubscribe();
   }
 
-  private updateFavicon(_url: string) {
-    // Dev: white | Staging: blue | Production: orange (all routes)
-    if (!environment.production) {
-      this.setFavicon('/favicon-dev.svg');
-      return;
-    }
-    if (environment.staging) {
-      this.setFavicon('/favicon-admin.svg');
-      return;
-    }
-    this.setFavicon('/favicon.svg');
+  private updateFavicon() {
+    this.setFavicon('/favicon.png');
   }
 
   private setFavicon(path: string) {
-    // Remove existing favicon links
     const existingLinks = document.querySelectorAll('link[rel*="icon"]');
     existingLinks.forEach(link => link.remove());
 
-    // Create new favicon link
     const link = document.createElement('link');
     link.rel = 'icon';
-    link.type = 'image/svg+xml';
-    link.href = `${path}?v=2.0.0`;
+    link.type = 'image/png';
+    link.href = `${path}?v=6.0.0`;
     document.head.appendChild(link);
 
-    // Also update apple-touch-icon
+    const shortcutLink = document.createElement('link');
+    shortcutLink.rel = 'shortcut icon';
+    shortcutLink.type = 'image/png';
+    shortcutLink.href = `${path}?v=6.0.0`;
+    document.head.appendChild(shortcutLink);
+
     const appleLink = document.createElement('link');
     appleLink.rel = 'apple-touch-icon';
-    appleLink.href = path;
+    appleLink.href = `${path}?v=6.0.0`;
     document.head.appendChild(appleLink);
   }
 }
