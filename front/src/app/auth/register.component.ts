@@ -189,8 +189,25 @@ export class RegisterComponent implements OnInit {
   ngOnInit(): void {
     this.api.getPublicLegalUrls().subscribe({ next: (u) => { this.legalTermsUrl.set(u.terms_of_service_url ?? null); this.legalPrivacyUrl.set(u.privacy_policy_url ?? null); }, error: () => {} });
     this.api.getSaasConfig().subscribe({ next: (c) => this.paywallEnabled.set(!!c.enabled), error: () => this.paywallEnabled.set(false) });
-    this.applyGooglePrefillFromQuery();
+    if (!this.applyGoogleCredentialFromNavigationState()) this.applyGooglePrefillFromQuery();
     this.loadGoogleButton();
+  }
+
+  private applyGoogleCredentialFromNavigationState(): boolean {
+    if (typeof history === 'undefined') return false;
+    const state = (history.state ?? {}) as Record<string, unknown>;
+    const credential = typeof state['googleSignupCredential'] === 'string'
+      ? state['googleSignupCredential'].trim()
+      : '';
+    if (!credential) return false;
+
+    this.googleCredential.set(credential);
+    this.googlePrefill.set(true);
+    this.step.set(1);
+
+    const { googleSignupCredential: _discardedCredential, ...safeState } = state;
+    history.replaceState(safeState, document.title);
+    return true;
   }
 
   private applyGooglePrefillFromQuery(): void {
