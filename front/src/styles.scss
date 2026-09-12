@@ -215,7 +215,7 @@ app-language-picker { display: none !important; }
 .pricing-card--highlight { border: 2px solid #374B89 !important; background: #fff !important; }
 .pricing-btn--ghost { border-color: #374B89 !important; color: #374B89 !important; background: #fff !important; }
 
-/* Login / Register: MDS Food identity and no language selector */
+/* Auth entry points: one MDS Food logo, always the version with slogan */
 .auth-page {
   background: linear-gradient(135deg, #F7F5EF 0%, #EEF1F8 100%) !important;
 }
@@ -226,10 +226,16 @@ app-language-picker { display: none !important; }
 .auth-card::before {
   content: '';
   display: block;
-  width: 190px;
-  height: 92px;
-  margin: 0 auto 1.25rem;
-  background: url('/logo-mds-food-header.png') center / contain no-repeat;
+  width: 200px;
+  height: 200px;
+  margin: -1rem auto .75rem;
+  background: url('/logo-mds-food.png') center / contain no-repeat;
+}
+/* Prevent legacy component-level logos from being rendered together with the shared auth brand. */
+.auth-card > .brand-wrap,
+.auth-card .auth-logo,
+.auth-card .brand-logo {
+  display: none !important;
 }
 .auth-header-row { justify-content: center !important; text-align: center; }
 .auth-header-row > div { width: 100%; }
@@ -239,6 +245,7 @@ app-language-picker { display: none !important; }
 @media (max-width: 900px) {
   .features-nav__brand,.pricing-nav__brand,.about-nav__brand { width: 150px; min-width: 150px; height: 58px; }
   .features-nav__links,.pricing-nav__links,.about-nav__links { gap: .75rem !important; }
+  .auth-card::before { width: 180px; height: 180px; }
 }
 
 @media print {
