@@ -57,7 +57,7 @@ export class UserManualPageComponent {
     });
   }
 
-  /** Each shipped UI locale loads its own HTML body; missing files fall back to English. */
+  /** MDS Food currently ships the public manual only in Brazilian Portuguese. */
   private contentLocale(lang: LanguageCode): LanguageCode {
     return lang;
   }
@@ -65,20 +65,10 @@ export class UserManualPageComponent {
   private fetchManualContent(locale: LanguageCode) {
     return this.http.get(`/manual-usuario/content/${locale}.html`, { responseType: 'text' }).pipe(
       catchError(() => {
-        if (locale === 'en') {
-          this.error.set(true);
-          this.loading.set(false);
-          this.contentHtml.set(null);
-          return of(null);
-        }
-        return this.http.get('/manual-usuario/content/en.html', { responseType: 'text' }).pipe(
-          catchError(() => {
-            this.error.set(true);
-            this.loading.set(false);
-            this.contentHtml.set(null);
-            return of(null);
-          }),
-        );
+        this.error.set(true);
+        this.loading.set(false);
+        this.contentHtml.set(null);
+        return of(null);
       }),
     );
   }
