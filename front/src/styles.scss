@@ -49,24 +49,12 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { background: var(--color-bg); }
-body {
-  font-family: var(--font-sans);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  line-height: 1.5;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text); line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 a { color: var(--color-primary); text-decoration: none; }
 a:hover { color: var(--color-primary-hover); text-decoration: underline; }
 button { font-family: var(--font-sans); cursor: pointer; }
 input, textarea, select { font-family: var(--font-sans); font-size: 1rem; color: var(--color-text); }
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(55, 75, 137, 0.12) !important;
-}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--color-primary) !important; box-shadow: 0 0 0 3px rgba(55, 75, 137, 0.12) !important; }
 h1,h2,h3,h4,h5,h6 { color: var(--color-brand-dark); }
 .container { max-width: 1200px; margin: 0 auto; padding: var(--space-5); }
 .overflow-hidden { overflow-x: hidden; }
@@ -91,167 +79,47 @@ h1,h2,h3,h4,h5,h6 { color: var(--color-brand-dark); }
 /* MDS Food white-label: single-language public/auth experience */
 app-language-picker { display: none !important; }
 
-/* Marketing pages: Features, Pricing and About */
-.features-page,
-.pricing-page,
-.about-page {
-  background: #F7F5EF !important;
-  color: #2F3453 !important;
-}
-.features-page__bg,
-.pricing-page__bg,
-.about-page__bg { display: none !important; }
-
-.features-nav,
-.pricing-nav,
-.about-nav {
-  background: #F7F5EF !important;
-  border-bottom: 1px solid rgba(47,52,83,.08);
-  flex-wrap: nowrap !important;
-}
-
-.features-nav__brand,
-.pricing-nav__brand,
-.about-nav__brand {
-  width: 210px;
-  min-width: 210px;
-  height: 72px;
-  background: url('/logo-mds-food-header.png') left center / contain no-repeat;
-  display: block !important;
-}
-.features-nav__brand > *,
-.pricing-nav__brand > *,
-.about-nav__brand > * { display: none !important; }
-
-.features-nav__link,
-.features-nav__login,
-.pricing-nav__link,
-.pricing-nav__login,
-.about-nav__link,
-.about-nav__login {
-  color: #2F3453 !important;
-  font-weight: 600 !important;
-}
-.features-nav__link:hover,
-.features-nav__link--active,
-.pricing-nav__link:hover,
-.pricing-nav__link--active,
-.about-nav__link:hover,
-.about-nav__link--active { color: #374B89 !important; }
-
-.features-nav__cta,
-.pricing-nav__cta,
-.about-nav__cta,
-.features-btn--primary,
-.pricing-btn--primary {
-  background: #D6A92F !important;
-  border-color: #D6A92F !important;
-  color: #fff !important;
-  font-weight: 800 !important;
-  box-shadow: none !important;
-}
-.features-nav__cta:hover,
-.pricing-nav__cta:hover,
-.about-nav__cta:hover,
-.features-btn--primary:hover,
-.pricing-btn--primary:hover { background: #C19620 !important; }
-
-.features-hero,
-.pricing-hero,
-.about-hero {
-  background: #2F3453 !important;
-  max-width: none !important;
-  color: #fff !important;
-  padding: 4rem max(var(--space-5), calc((100vw - 72rem)/2 + var(--space-5))) !important;
-}
-.features-hero__title,
-.features-hero__subtitle,
-.features-hero__badge,
-.pricing-hero__title,
-.pricing-hero__subtitle,
-.pricing-hero__badge,
-.pricing-hero__callout,
-.about-hero__title,
-.about-hero__subtitle,
-.about-hero__badge { color: #fff !important; }
-.features-hero__badge,
-.pricing-hero__badge,
-.about-hero__badge,
-.pricing-hero__callout {
-  border-color: rgba(255,255,255,.22) !important;
-  background: rgba(255,255,255,.07) !important;
-}
-
-.features-main,
-.pricing-main,
-.about-main { background: #F7F5EF !important; color: #2F3453 !important; padding-top: 3rem !important; }
-.features-category__title,
-.features-card__more,
-.about-section__title,
-.pricing-support__eyebrow { color: #D6A92F !important; }
-.features-card,
-.pricing-card,
-.pricing-support,
-.about-section {
-  background: #fff !important;
-  border: 1px solid rgba(47,52,83,.10) !important;
-  box-shadow: 0 10px 30px rgba(47,52,83,.06) !important;
-}
+/* Marketing pages */
+.features-page,.pricing-page,.about-page { background: #F7F5EF !important; color: #2F3453 !important; }
+.features-page__bg,.pricing-page__bg,.about-page__bg { display: none !important; }
+.features-nav,.pricing-nav,.about-nav { background: #F7F5EF !important; border-bottom: 1px solid rgba(47,52,83,.08); flex-wrap: nowrap !important; }
+.features-nav__brand,.pricing-nav__brand,.about-nav__brand { width: 210px; min-width: 210px; height: 72px; background: url('/logo-mds-food-header.png') left center / contain no-repeat; display: block !important; }
+.features-nav__brand > *,.pricing-nav__brand > *,.about-nav__brand > * { display: none !important; }
+.features-nav__link,.features-nav__login,.pricing-nav__link,.pricing-nav__login,.about-nav__link,.about-nav__login { color: #2F3453 !important; font-weight: 600 !important; }
+.features-nav__link:hover,.features-nav__link--active,.pricing-nav__link:hover,.pricing-nav__link--active,.about-nav__link:hover,.about-nav__link--active { color: #374B89 !important; }
+.features-nav__cta,.pricing-nav__cta,.about-nav__cta,.features-btn--primary,.pricing-btn--primary { background: #D6A92F !important; border-color: #D6A92F !important; color: #fff !important; font-weight: 800 !important; box-shadow: none !important; }
+.features-nav__cta:hover,.pricing-nav__cta:hover,.about-nav__cta:hover,.features-btn--primary:hover,.pricing-btn--primary:hover { background: #C19620 !important; }
+.features-hero,.pricing-hero,.about-hero { background: #2F3453 !important; max-width: none !important; color: #fff !important; padding: 4rem max(var(--space-5), calc((100vw - 72rem)/2 + var(--space-5))) !important; }
+.features-hero__title,.features-hero__subtitle,.features-hero__badge,.pricing-hero__title,.pricing-hero__subtitle,.pricing-hero__badge,.pricing-hero__callout,.about-hero__title,.about-hero__subtitle,.about-hero__badge { color: #fff !important; }
+.features-hero__badge,.pricing-hero__badge,.about-hero__badge,.pricing-hero__callout { border-color: rgba(255,255,255,.22) !important; background: rgba(255,255,255,.07) !important; }
+.features-main,.pricing-main,.about-main { background: #F7F5EF !important; color: #2F3453 !important; padding-top: 3rem !important; }
+.features-category__title,.features-card__more,.about-section__title,.pricing-support__eyebrow { color: #D6A92F !important; }
+.features-card,.pricing-card,.pricing-support,.about-section { background: #fff !important; border: 1px solid rgba(47,52,83,.10) !important; box-shadow: 0 10px 30px rgba(47,52,83,.06) !important; }
 .features-card:hover { border-color: rgba(55,75,137,.30) !important; background: #fff !important; }
-.features-card__title,
-.pricing-card__name,
-.pricing-card__amount,
-.pricing-support__headline,
-.about-section__body,
-.about-section__link { color: #2F3453 !important; }
-.features-card__text,
-.pricing-card__lede,
-.pricing-card__period,
-.pricing-card__trial,
-.pricing-card__billing-note,
-.pricing-support__lede,
-.pricing-support__note,
-.about-section__body { color: #667085 !important; }
+.features-card__title,.pricing-card__name,.pricing-card__amount,.pricing-support__headline,.about-section__body,.about-section__link { color: #2F3453 !important; }
+.features-card__text,.pricing-card__lede,.pricing-card__period,.pricing-card__trial,.pricing-card__billing-note,.pricing-support__lede,.pricing-support__note,.about-section__body { color: #667085 !important; }
 .pricing-card--highlight { border: 2px solid #374B89 !important; background: #fff !important; }
 .pricing-btn--ghost { border-color: #374B89 !important; color: #374B89 !important; background: #fff !important; }
 
-/* Auth entry points: one MDS Food logo, always the version with slogan */
-.auth-page {
-  background: linear-gradient(135deg, #F7F5EF 0%, #EEF1F8 100%) !important;
-}
-.auth-card {
-  border: 1px solid rgba(47,52,83,.10);
-  box-shadow: 0 18px 42px rgba(47,52,83,.14) !important;
-}
-.auth-card::before {
-  content: '';
-  display: block;
-  width: 200px;
-  height: 200px;
-  margin: -1rem auto .75rem;
-  background: url('/logo-mds-food.png') center / contain no-repeat;
-}
-/* Prevent legacy component-level logos from being rendered together with the shared auth brand. */
-.auth-card > .brand-wrap,
-.auth-card .auth-logo,
-.auth-card .brand-logo {
-  display: none !important;
-}
-/* Registration: remove explanatory notice that adds friction before the form. */
+/* Auth entry points */
+.auth-page { background: linear-gradient(135deg, #F7F5EF 0%, #EEF1F8 100%) !important; }
+.auth-card { border: 1px solid rgba(47,52,83,.10); box-shadow: 0 18px 42px rgba(47,52,83,.14) !important; }
+.auth-card::before { content: ''; display: block; width: 200px; height: 200px; margin: -1rem auto .75rem; background: url('/logo-mds-food.png') center / contain no-repeat; }
+.auth-card > .brand-wrap,.auth-card .auth-logo,.auth-card .brand-logo { display: none !important; }
 .auth-card .register-explanation { display: none !important; }
-/* Registration: make the expected Brazilian phone format obvious before submission. */
-.auth-card .form-group:has(#phone)::after,
-.auth-card .form-group:has(#google-phone)::after {
-  content: 'Digite seu DDD + número. Ex.: (17) 99188-6725';
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: .8125rem;
-}
+.auth-card .form-group:has(#phone)::after,.auth-card .form-group:has(#google-phone)::after { content: 'Digite seu DDD + número.'; display: block; margin-top: var(--space-1); color: var(--color-text-muted); font-size: .8125rem; }
 .auth-header-row { justify-content: center !important; text-align: center; }
 .auth-header-row > div { width: 100%; }
 .btn-submit { background: #D6A92F !important; color: #fff !important; font-weight: 800 !important; }
 .btn-submit:hover:not(:disabled) { background: #C19620 !important; }
+
+/* Staff shell white-label: replace legacy POS/version header with MDS Food icon. */
+.sidebar .logo-container { min-height: 76px; display: flex !important; flex-direction: column; justify-content: center; align-items: flex-start; }
+.sidebar .logo-container::before { content: ''; display: block; width: 58px; height: 58px; background: url('/favicon.png') center / contain no-repeat; }
+.sidebar .logo-container > .logo,.sidebar .logo-container > .version { display: none !important; }
+.sidebar .sidebar-org-name { margin-top: .25rem; font-weight: 600; color: #2F3453; }
+.mobile-header .mobile-brand::before { content: ''; display: inline-block; width: 38px; height: 38px; background: url('/favicon.png') center / contain no-repeat; vertical-align: middle; margin-right: .5rem; }
+.mobile-header .header-title { display: none !important; }
 
 @media (max-width: 900px) {
   .features-nav__brand,.pricing-nav__brand,.about-nav__brand { width: 150px; min-width: 150px; height: 58px; }
@@ -261,9 +129,7 @@ app-language-picker { display: none !important; }
 
 @media print {
   body.print-feedback-qr-only {
-    .layout > .sidebar,
-    .layout > .mobile-header,
-    .layout > .overlay { display: none !important; }
+    .layout > .sidebar,.layout > .mobile-header,.layout > .overlay { display: none !important; }
     .layout > .main { margin: 0 !important; padding: 1.5rem !important; width: 100% !important; max-width: none !important; }
     .no-print-on-feedback-qr { display: none !important; }
   }
