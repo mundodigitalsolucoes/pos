@@ -245,11 +245,7 @@ export class LoginComponent implements OnInit {
         this.loading.set(false);
         if (err.status === 404 && err.error?.status === 'signup_required') {
           void this.router.navigate(['/register'], {
-            queryParams: {
-              google: '1',
-              google_email: err.error?.email ?? '',
-              google_name: err.error?.full_name ?? '',
-            },
+            state: { googleSignupCredential: credential },
           });
           return;
         }
