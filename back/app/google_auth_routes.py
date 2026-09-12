@@ -1,22 +1,29 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import secrets
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from . import models, security
+from .contact_validation import normalize_email_address, normalize_phone_e164
 from .db import get_session
 from .google_auth import (
     GoogleAuthConfigurationError,
     GoogleTokenValidationError,
     verify_google_id_token,
 )
+from .onboarding import assign_maps_url
 from .rate_limits import limiter, rate_limit_key_user
+from .saas_billing import initial_status_for_new_tenant
 from .settings import settings
+from .tenant_ui_modules import new_tenant_ui_modules_stored
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -28,6 +35,14 @@ class GoogleLoginBody(BaseModel):
 
 class GoogleLinkBody(BaseModel):
     credential: str = Field(min_length=1)
+
+
+class GoogleSignupBody(BaseModel):
+    credential: str = Field(min_length=1)
+    tenant_name: str = Field(min_length=1, max_length=200)
+    address: str = Field(min_length=1, max_length=500)
+    phone: str = Field(min_length=1, max_length=64)
+    maps_url: str | None = Field(default=None, max_length=2000)
 
 
 def _token_data_for_user(user: models.User) -> dict:
@@ -160,11 +175,142 @@ def _verify_google_credential(credential: str):
         ) from exc
 
 
+def _normalize_maps_url(value: str | None) -> str | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    parsed = urlparse(raw)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid maps URL",
+        )
+    return raw
+
+
 @router.get("/google/config")
 def google_auth_config() -> dict:
     """Public browser configuration. A Google OAuth client ID is not a secret."""
     client_id = settings.google_client_id.strip()
     return {"enabled": bool(client_id), "client_id": client_id}
+
+
+@router.post("/google/signup")
+@limiter.limit(f"{getattr(settings, 'rate_limit_register_per_hour', 3)}/hour")
+def signup_with_google(
+    request: Request,
+    body: GoogleSignupBody,
+    session: Session = Depends(get_session),
+) -> JSONResponse:
+    """Create a new tenant owner directly from a verified Google identity."""
+    identity = _verify_google_credential(body.credential)
+
+    try:
+        email = normalize_email_address(identity.email)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Google email",
+        ) from exc
+
+    tenant_name = body.tenant_name.strip()
+    address = body.address.strip()
+    if not tenant_name or not address:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Restaurant name and address are required",
+        )
+
+    try:
+        phone = normalize_phone_e164(body.phone, settings.default_phone_country)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid phone number",
+        ) from exc
+    maps_url = _normalize_maps_url(body.maps_url)
+
+    subject_owner = _get_user_by_google_subject(session, identity.subject)
+    if subject_owner:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "google_identity_already_registered",
+                "message": "This Google identity already has an MDS Food account",
+            },
+        )
+
+    existing_user = session.exec(
+        select(models.User).where(models.User.email == email)
+    ).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "google_link_required",
+                "message": "Sign in with your existing MDS Food account to link Google safely",
+            },
+        )
+
+    try:
+        tenant_count = session.exec(select(models.Tenant)).all()
+        user_count = session.exec(select(models.User)).all()
+        if len(user_count) == 0 and len(tenant_count) == 1:
+            tenant = tenant_count[0]
+        else:
+            tenant = models.Tenant(
+                name=tenant_name,
+                ui_modules=new_tenant_ui_modules_stored(),
+                saas_subscription_status=initial_status_for_new_tenant(),
+            )
+            session.add(tenant)
+            session.flush()
+
+        tenant.address = address
+        tenant.phone = phone
+        if maps_url:
+            assign_maps_url(tenant, maps_url)
+        session.add(tenant)
+        session.flush()
+
+        user = models.User(
+            email=email,
+            hashed_password=security.get_password_hash(secrets.token_urlsafe(48)),
+            full_name=identity.full_name,
+            tenant_id=tenant.id,
+            role=models.UserRole.owner,
+        )
+        session.add(user)
+        session.flush()
+
+        session.execute(
+            text(
+                'UPDATE "user" '
+                'SET google_subject = :subject, auth_provider = :provider '
+                'WHERE id = :user_id'
+            ),
+            {
+                "subject": identity.subject,
+                "provider": "google",
+                "user_id": user.id,
+            },
+        )
+        session.commit()
+        session.refresh(user)
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "google_signup_conflict",
+                "message": "This Google account or email is already registered",
+            },
+        ) from exc
+
+    _record_login_event(session, user)
+    response = _issue_session_cookies(user)
+    response.status_code = status.HTTP_201_CREATED
+    return response
 
 
 @router.post("/google/link")
@@ -238,8 +384,6 @@ def login_with_google(
             },
         )
 
-    # Google sign-in on this endpoint is intentionally tenant-only. Platform and
-    # provider identities remain isolated from the restaurant login surface.
     if (
         user.tenant_id is None
         or user.provider_id is not None
@@ -257,9 +401,6 @@ def login_with_google(
             detail="This account is linked to another Google identity",
         )
 
-    # Do not silently bind an existing password account based only on matching
-    # email. Linking is allowed only after an authenticated session proves
-    # control of the MDS Food account via /google/link.
     if not stored_subject:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -269,8 +410,6 @@ def login_with_google(
             },
         )
 
-    # Preserve MDS Food TOTP as a second factor even when Google authenticated
-    # the primary identity.
     if getattr(user, "otp_enabled", False) and getattr(user, "otp_secret", None):
         temp_token = security.create_otp_pending_token(_token_data_for_user(user))
         return JSONResponse(
