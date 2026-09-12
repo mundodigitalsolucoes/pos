@@ -32,4 +32,19 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
+      - name: Verify Brazilian phone normalization
+        run: |
+          python - <<'PY'
+          from app.contact_validation import normalize_phone_e164
+          from app.phone_utils import normalize_phone_to_e164
+          from app.settings import Settings
+
+          expected = "+5517991886725"
+          assert Settings.model_fields["default_phone_country"].default == "BR"
+          assert normalize_phone_e164("17991886725", "BR") == expected
+          assert normalize_phone_e164("(17) 99188-6725", "BR") == expected
+          assert normalize_phone_e164("+55 17 99188-6725", "BR") == expected
+          assert normalize_phone_to_e164("17991886725") == expected
+          print("Brazilian phone normalization OK")
+          PY
       - run: python -m compileall app
