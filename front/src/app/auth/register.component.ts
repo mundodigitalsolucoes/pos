@@ -6,6 +6,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { ApiService } from '../services/api.service';
 import { ApiErrorMessageService } from '../services/api-error-message.service';
+import { GoogleSignupService } from '../services/google-signup.service';
 import { LegalLinksComponent } from '../shared/legal-links.component';
 
 interface StarterProductState {
@@ -89,23 +90,31 @@ const STARTER_DEFAULTS: StarterProductState[] = [
         }
 
         @if (step() === 1) {
-          <div class="register-explanation"><p class="register-explanation-title">{{ 'AUTH.REGISTER_WHO_IS_THIS_FOR' | translate }}</p><p class="register-explanation-guests">{{ 'AUTH.REGISTER_GUEST_HINT' | translate }}</p></div>
-          @if (googlePrefill()) { <div class="google-linked-notice"><strong>Conta Google selecionada</strong><span>{{ accountForm.get('email')?.value }}</span></div> }
-
-          <form [formGroup]="accountForm" (ngSubmit)="submitAccount()">
-            <div class="form-group"><label for="tenant">{{ 'AUTH.ORGANIZATION_NAME' | translate }}</label><input id="tenant" type="text" formControlName="tenant_name" [placeholder]="translate.instant('AUTH.ORGANIZATION_PLACEHOLDER')"></div>
-            <div class="form-group"><label for="address">{{ 'AUTH.SIGNUP_ADDRESS' | translate }}</label><input id="address" type="text" formControlName="address" [placeholder]="translate.instant('AUTH.SIGNUP_ADDRESS_PLACEHOLDER')"></div>
-            <div class="form-group"><label for="phone">{{ 'AUTH.SIGNUP_PHONE' | translate }}</label><input id="phone" type="tel" formControlName="phone" [placeholder]="translate.instant('AUTH.SIGNUP_PHONE_PLACEHOLDER')"></div>
-            <div class="form-group"><label for="maps_url">{{ 'AUTH.SIGNUP_MAPS_URL' | translate }}</label><input id="maps_url" type="url" formControlName="maps_url" [placeholder]="translate.instant('AUTH.SIGNUP_MAPS_URL_PLACEHOLDER')"><small class="field-hint">{{ 'AUTH.SIGNUP_MAPS_URL_HINT' | translate }}</small></div>
-            <div class="form-group"><label for="name">{{ 'AUTH.FULL_NAME' | translate }}</label><input id="name" type="text" formControlName="full_name" [placeholder]="translate.instant('AUTH.NAME_PLACEHOLDER')"></div>
-            <div class="form-group"><label for="email">{{ 'AUTH.EMAIL' | translate }}</label><input id="email" type="email" formControlName="email" [readonly]="googlePrefill()" [placeholder]="translate.instant('AUTH.EMAIL_PLACEHOLDER')" autocomplete="email"></div>
-            <div class="form-group"><label for="password">{{ 'AUTH.PASSWORD' | translate }}</label><div class="input-with-toggle"><input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" [placeholder]="translate.instant('AUTH.PASSWORD_PLACEHOLDER')" autocomplete="new-password"><button type="button" class="pw-toggle" (click)="showPassword.set(!showPassword())" tabindex="-1">{{ showPassword() ? ('AUTH.HIDE_PASSWORD' | translate) : ('AUTH.SHOW_PASSWORD' | translate) }}</button></div>@if (googlePrefill()) { <small class="field-hint">Defina uma senha de recuperação para também poder entrar sem o Google.</small> }</div>
-            <div class="form-group"><label for="password_confirm">{{ 'AUTH.CONFIRM_PASSWORD' | translate }}</label><div class="input-with-toggle"><input id="password_confirm" [type]="showPasswordConfirm() ? 'text' : 'password'" formControlName="password_confirm" [placeholder]="translate.instant('AUTH.CONFIRM_PASSWORD_PLACEHOLDER')" autocomplete="new-password"><button type="button" class="pw-toggle" (click)="showPasswordConfirm.set(!showPasswordConfirm())" tabindex="-1">{{ showPasswordConfirm() ? ('AUTH.HIDE_PASSWORD' | translate) : ('AUTH.SHOW_PASSWORD' | translate) }}</button></div></div>
-            @if (accountForm.get('email')?.touched && accountForm.get('email')?.errors?.['contactEmail']) { <div class="error-banner">{{ 'AUTH.INVALID_EMAIL' | translate }}</div> }
-            @if (accountForm.get('password_confirm')?.touched && accountForm.errors?.['passwordMismatch']) { <div class="error-banner">{{ 'AUTH.PASSWORDS_DO_NOT_MATCH' | translate }}</div> }
-            @if (error()) { <div class="error-banner">{{ error() }}@if (emailAlreadyRegistered()) { <div class="sign-in-hint"><a routerLink="/login">{{ 'AUTH.SIGN_IN_INSTEAD' | translate }}</a></div> }</div> }
-            <div class="wizard-nav"><button type="button" class="btn-secondary" (click)="step.set(0)">{{ 'COMMON.BACK' | translate }}</button><button type="submit" class="btn-submit" [disabled]="accountForm.invalid || loading()">{{ loading() ? ('AUTH.CREATING_ACCOUNT' | translate) : ('COMMON.NEXT' | translate) }}</button></div>
-          </form>
+          @if (isVerifiedGoogleSignup()) {
+            <form [formGroup]="googleRestaurantForm" (ngSubmit)="submitGoogleAccount()">
+              <div class="form-group"><label for="google-tenant">{{ 'AUTH.ORGANIZATION_NAME' | translate }}</label><input id="google-tenant" type="text" formControlName="tenant_name" [placeholder]="translate.instant('AUTH.ORGANIZATION_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="google-address">{{ 'AUTH.SIGNUP_ADDRESS' | translate }}</label><input id="google-address" type="text" formControlName="address" [placeholder]="translate.instant('AUTH.SIGNUP_ADDRESS_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="google-phone">{{ 'AUTH.SIGNUP_PHONE' | translate }}</label><input id="google-phone" type="tel" formControlName="phone" [placeholder]="translate.instant('AUTH.SIGNUP_PHONE_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="google-maps-url">{{ 'AUTH.SIGNUP_MAPS_URL' | translate }}</label><input id="google-maps-url" type="url" formControlName="maps_url" [placeholder]="translate.instant('AUTH.SIGNUP_MAPS_URL_PLACEHOLDER')"><small class="field-hint">{{ 'AUTH.SIGNUP_MAPS_URL_HINT' | translate }}</small></div>
+              @if (error()) { <div class="error-banner">{{ error() }}</div> }
+              <div class="wizard-nav"><button type="button" class="btn-secondary" (click)="step.set(0)">{{ 'COMMON.BACK' | translate }}</button><button type="submit" class="btn-submit" [disabled]="googleRestaurantForm.invalid || loading()">{{ loading() ? ('AUTH.CREATING_ACCOUNT' | translate) : ('COMMON.NEXT' | translate) }}</button></div>
+            </form>
+          } @else {
+            <form [formGroup]="accountForm" (ngSubmit)="submitAccount()">
+              <div class="form-group"><label for="tenant">{{ 'AUTH.ORGANIZATION_NAME' | translate }}</label><input id="tenant" type="text" formControlName="tenant_name" [placeholder]="translate.instant('AUTH.ORGANIZATION_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="address">{{ 'AUTH.SIGNUP_ADDRESS' | translate }}</label><input id="address" type="text" formControlName="address" [placeholder]="translate.instant('AUTH.SIGNUP_ADDRESS_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="phone">{{ 'AUTH.SIGNUP_PHONE' | translate }}</label><input id="phone" type="tel" formControlName="phone" [placeholder]="translate.instant('AUTH.SIGNUP_PHONE_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="maps_url">{{ 'AUTH.SIGNUP_MAPS_URL' | translate }}</label><input id="maps_url" type="url" formControlName="maps_url" [placeholder]="translate.instant('AUTH.SIGNUP_MAPS_URL_PLACEHOLDER')"><small class="field-hint">{{ 'AUTH.SIGNUP_MAPS_URL_HINT' | translate }}</small></div>
+              <div class="form-group"><label for="name">{{ 'AUTH.FULL_NAME' | translate }}</label><input id="name" type="text" formControlName="full_name" [placeholder]="translate.instant('AUTH.NAME_PLACEHOLDER')"></div>
+              <div class="form-group"><label for="email">{{ 'AUTH.EMAIL' | translate }}</label><input id="email" type="email" formControlName="email" [readonly]="googlePrefill()" [placeholder]="translate.instant('AUTH.EMAIL_PLACEHOLDER')" autocomplete="email"></div>
+              <div class="form-group"><label for="password">{{ 'AUTH.PASSWORD' | translate }}</label><div class="input-with-toggle"><input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" [placeholder]="translate.instant('AUTH.PASSWORD_PLACEHOLDER')" autocomplete="new-password"><button type="button" class="pw-toggle" (click)="showPassword.set(!showPassword())" tabindex="-1">{{ showPassword() ? ('AUTH.HIDE_PASSWORD' | translate) : ('AUTH.SHOW_PASSWORD' | translate) }}</button></div></div>
+              <div class="form-group"><label for="password_confirm">{{ 'AUTH.CONFIRM_PASSWORD' | translate }}</label><div class="input-with-toggle"><input id="password_confirm" [type]="showPasswordConfirm() ? 'text' : 'password'" formControlName="password_confirm" [placeholder]="translate.instant('AUTH.CONFIRM_PASSWORD_PLACEHOLDER')" autocomplete="new-password"><button type="button" class="pw-toggle" (click)="showPasswordConfirm.set(!showPasswordConfirm())" tabindex="-1">{{ showPasswordConfirm() ? ('AUTH.HIDE_PASSWORD' | translate) : ('AUTH.SHOW_PASSWORD' | translate) }}</button></div></div>
+              @if (accountForm.get('email')?.touched && accountForm.get('email')?.errors?.['contactEmail']) { <div class="error-banner">{{ 'AUTH.INVALID_EMAIL' | translate }}</div> }
+              @if (accountForm.get('password_confirm')?.touched && accountForm.errors?.['passwordMismatch']) { <div class="error-banner">{{ 'AUTH.PASSWORDS_DO_NOT_MATCH' | translate }}</div> }
+              @if (error()) { <div class="error-banner">{{ error() }}@if (emailAlreadyRegistered()) { <div class="sign-in-hint"><a routerLink="/login">{{ 'AUTH.SIGN_IN_INSTEAD' | translate }}</a></div> }</div> }
+              <div class="wizard-nav"><button type="button" class="btn-secondary" (click)="step.set(0)">{{ 'COMMON.BACK' | translate }}</button><button type="submit" class="btn-submit" [disabled]="accountForm.invalid || loading()">{{ loading() ? ('AUTH.CREATING_ACCOUNT' | translate) : ('COMMON.NEXT' | translate) }}</button></div>
+            </form>
+          }
         }
 
         @if (step() === 2) {
@@ -139,6 +148,7 @@ const STARTER_DEFAULTS: StarterProductState[] = [
 export class RegisterComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(ApiService);
+  private googleSignup = inject(GoogleSignupService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   translate = inject(TranslateService);
@@ -169,6 +179,13 @@ export class RegisterComponent implements OnInit {
     { validators: (g) => g.get('password')?.value === g.get('password_confirm')?.value ? null : { passwordMismatch: true } },
   );
 
+  googleRestaurantForm = this.fb.group({
+    tenant_name: ['', Validators.required],
+    address: ['', Validators.required],
+    phone: ['', Validators.required],
+    maps_url: [''],
+  });
+
   ngOnInit(): void {
     this.api.getPublicLegalUrls().subscribe({ next: (u) => { this.legalTermsUrl.set(u.terms_of_service_url ?? null); this.legalPrivacyUrl.set(u.privacy_policy_url ?? null); }, error: () => {} });
     this.api.getSaasConfig().subscribe({ next: (c) => this.paywallEnabled.set(!!c.enabled), error: () => this.paywallEnabled.set(false) });
@@ -180,7 +197,8 @@ export class RegisterComponent implements OnInit {
     const email = this.route.snapshot.queryParamMap.get('google_email')?.trim() ?? '';
     const fullName = this.route.snapshot.queryParamMap.get('google_name')?.trim() ?? '';
     if (!email) return;
-    this.googlePrefill.set(true);
+    // Query params are convenience only; they are never treated as proof of Google identity.
+    this.googlePrefill.set(false);
     this.googleCredential.set(null);
     this.accountForm.patchValue({ email, full_name: fullName || this.accountForm.get('full_name')?.value || '' });
     this.step.set(1);
@@ -216,6 +234,12 @@ export class RegisterComponent implements OnInit {
         if (err.status === 404 && err.error?.status === 'signup_required') {
           this.googlePrefill.set(true);
           this.accountForm.patchValue({ email: err.error?.email ?? '', full_name: err.error?.full_name ?? '' });
+          this.googleRestaurantForm.patchValue({
+            tenant_name: this.accountForm.get('tenant_name')?.value ?? '',
+            address: this.accountForm.get('address')?.value ?? '',
+            phone: this.accountForm.get('phone')?.value ?? '',
+            maps_url: this.accountForm.get('maps_url')?.value ?? '',
+          });
           this.step.set(1);
           return;
         }
@@ -229,6 +253,7 @@ export class RegisterComponent implements OnInit {
     });
   }
 
+  isVerifiedGoogleSignup(): boolean { return !!this.googleCredential(); }
   stepTitle(): string { const keys = ['AUTH.SIGNUP_STEP_TITLE_INTRO','AUTH.SIGNUP_STEP_TITLE_ACCOUNT','AUTH.SIGNUP_STEP_TITLE_PRODUCTS','AUTH.SIGNUP_STEP_TITLE_PHOTOS','AUTH.SIGNUP_STEP_TITLE_DONE']; return this.translate.instant(keys[this.step()] ?? keys[0]); }
   starterLabel(name: string): string { const keyMap: Record<string,string> = { Coffee:'AUTH.SIGNUP_PRODUCT_COFFEE','Coca Cola':'AUTH.SIGNUP_PRODUCT_COKE',Water:'AUTH.SIGNUP_PRODUCT_WATER' }; return this.translate.instant(keyMap[name] ?? name); }
   hasEnabledStarter(): boolean { return this.starterProducts().some((p) => p.enabled); }
@@ -252,6 +277,48 @@ export class RegisterComponent implements OnInit {
           this.googlePrefill.set(false);
           this.error.set('A confirmação do Google expirou. Se quiser vincular a conta agora, volte e escolha Continuar com Google novamente. Seu cadastro foi criado e você pode seguir normalmente com sua senha.');
           this.step.set(2);
+          return;
+        }
+        this.error.set(this.apiErr.fromHttpError(err, 'COMMON.API_REQUEST_FAILED'));
+      },
+    });
+  }
+
+  submitGoogleAccount(): void {
+    const credential = this.googleCredential();
+    if (!credential || this.googleRestaurantForm.invalid) return;
+    this.error.set(''); this.emailAlreadyRegistered.set(false); this.loading.set(true);
+    const value = this.googleRestaurantForm.getRawValue();
+    this.googleSignup.signup({
+      credential,
+      tenant_name: value.tenant_name ?? '',
+      address: value.address ?? '',
+      phone: value.phone ?? '',
+      maps_url: value.maps_url || null,
+    }).subscribe({
+      next: (res) => {
+        this.tenantId.set(res.tenant_id ?? null);
+        this.googleCredential.set(null);
+        this.googlePrefill.set(false);
+        this.loading.set(false);
+        this.api.checkAuth().subscribe({ error: () => {} });
+        this.step.set(2);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        const code = err.error?.detail?.code;
+        if (err.status === 401) {
+          this.googleCredential.set(null);
+          this.googlePrefill.set(false);
+          this.step.set(0);
+          this.error.set('A confirmação do Google expirou. Escolha Continuar com Google novamente.');
+          return;
+        }
+        if (err.status === 409 && ['google_link_required','google_identity_already_registered','google_signup_conflict'].includes(code)) {
+          this.googleCredential.set(null);
+          this.googlePrefill.set(false);
+          this.step.set(0);
+          this.error.set('Esta conta Google já está associada a uma conta MDS Food. Entre pela tela de login para continuar.');
           return;
         }
         this.error.set(this.apiErr.fromHttpError(err, 'COMMON.API_REQUEST_FAILED'));
