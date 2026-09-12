@@ -24,6 +24,7 @@ export class App implements OnInit, OnDestroy {
   ngOnInit() {
     this.seo.start();
     this.updateFavicon();
+    this.ensureStaffShortcutStyles();
 
     this.userSub = this.api.user$.subscribe((user) => {
       this.currentTenantId = user?.tenant_id ?? null;
@@ -70,6 +71,74 @@ export class App implements OnInit, OnDestroy {
     appleLink.rel = 'apple-touch-icon';
     appleLink.href = `${path}?v=6.0.0`;
     document.head.appendChild(appleLink);
+  }
+
+  private ensureStaffShortcutStyles(): void {
+    if (document.getElementById('mds-public-menu-shortcut-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'mds-public-menu-shortcut-styles';
+    style.textContent = `
+      #staff-sidebar-nav .mds-public-menu-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 42px;
+        padding: 10px 20px;
+        color: #374B89;
+        font-weight: 700;
+        text-decoration: none;
+        border-left: 3px solid transparent;
+      }
+      #staff-sidebar-nav .mds-public-menu-link:hover {
+        background: rgba(55, 75, 137, .08);
+        border-left-color: #D6A92F;
+        color: #2F3453;
+      }
+      #staff-sidebar-nav .mds-public-menu-link svg {
+        flex: 0 0 auto;
+      }
+      .quick-actions .mds-public-menu-card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        min-height: 160px;
+        padding: 20px;
+        border: 2px solid #D6A92F;
+        border-radius: 14px;
+        background: #fff;
+        color: #2F3453;
+        text-decoration: none;
+        box-shadow: 0 8px 24px rgba(47, 52, 83, .08);
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      }
+      .quick-actions .mds-public-menu-card:hover {
+        transform: translateY(-2px);
+        border-color: #C19620;
+        box-shadow: 0 12px 28px rgba(47, 52, 83, .13);
+        text-decoration: none;
+      }
+      .quick-actions .mds-public-menu-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        background: rgba(214, 169, 47, .15);
+        color: #374B89;
+      }
+      .quick-actions .mds-public-menu-card .action-label {
+        margin-top: 2px;
+        color: #2F3453;
+        font-weight: 800;
+      }
+      .quick-actions .mds-public-menu-card .action-desc {
+        color: #6F7895;
+        line-height: 1.45;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private scheduleStaffShortcuts(): void {
