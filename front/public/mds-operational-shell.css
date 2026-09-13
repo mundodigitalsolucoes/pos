@@ -142,7 +142,11 @@
 .quick-actions > a.action-card[href="/working-plan"] { order: 150; }
 .quick-actions > a.action-card[href="/users"] { order: 160; }
 .quick-actions > a.action-card[href="/settings"] { order: 170; }
-.quick-actions > .action-card-whats-new { order: 900; }
+
+/* Changelog/upstream release notes are not part of the restaurant's daily commercial workflow. */
+.quick-actions > .action-card-whats-new {
+  display: none !important;
+}
 
 .quick-actions > a.action-card[href="/staff/orders"],
 .quick-actions > a.action-card[href="/tables"],
@@ -158,12 +162,6 @@
 .quick-actions > a.action-card[href="/bar"] .action-icon {
   background: rgba(55, 75, 137, 0.10) !important;
   color: #374B89 !important;
-}
-
-.quick-actions > .action-card-whats-new {
-  border-style: solid !important;
-  border-color: rgba(47, 52, 83, 0.12) !important;
-  background: #F7F5EF !important;
 }
 
 @media (max-width: 599px) {
