@@ -106,6 +106,7 @@ export const routes: Routes = [
 
   // MDS Food operational access to the tenant's existing public sales channels.
   { path: 'cardapio-online', canActivate: [authGuard, adminGuard], loadComponent: () => import('./cardapio-online/cardapio-online.component').then(m => m.CardapioOnlineComponent) },
+  { path: 'caixa', canActivate: [authGuard, permissionGuard('order:update_status'), permissionGuard('order:mark_paid')], loadComponent: () => import('./caixa/caixa.component').then(m => m.CaixaComponent) },
 
   // MDS Food commercial areas backed by existing tenant-scoped features.
   { path: 'minha-empresa', canActivate: [authGuard, adminGuard], loadComponent: () => import('./minha-empresa/minha-empresa.component').then(m => m.MinhaEmpresaComponent) },
