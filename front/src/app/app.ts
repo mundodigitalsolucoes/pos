@@ -4,6 +4,7 @@ import { filter, Subscription } from 'rxjs';
 import { LanguageService } from './services/language.service';
 import { SeoService } from './services/seo.service';
 import { ApiService } from './services/api.service';
+import { PermissionService } from './services/permission.service';
 
 @Component({
   selector: 'app-root',
@@ -15,6 +16,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly title = signal('MDS Food');
   private router = inject(Router);
   private api = inject(ApiService);
+  private permissions = inject(PermissionService);
   private routerSub?: Subscription;
   private userSub?: Subscription;
   private currentTenantId: number | null = null;
@@ -137,6 +139,74 @@ export class App implements OnInit, OnDestroy {
         color: #6F7895;
         line-height: 1.45;
       }
+      .mds-operational-summary {
+        margin: 0 0 24px;
+      }
+      .mds-operational-summary-header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+      .mds-operational-summary-title {
+        margin: 0;
+        color: #2F3453;
+        font-size: 1.15rem;
+        font-weight: 800;
+      }
+      .mds-operational-summary-caption {
+        margin: 0;
+        color: #6F7895;
+        font-size: .82rem;
+      }
+      .mds-operational-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .mds-operational-kpi {
+        display: flex;
+        min-height: 112px;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 16px;
+        border: 1px solid rgba(47, 52, 83, .14);
+        border-radius: 14px;
+        background: #fff;
+        color: #2F3453;
+        text-decoration: none;
+        box-shadow: 0 6px 18px rgba(47, 52, 83, .05);
+        transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+      }
+      .mds-operational-kpi:hover {
+        transform: translateY(-1px);
+        border-color: #D6A92F;
+        box-shadow: 0 9px 22px rgba(47, 52, 83, .09);
+        text-decoration: none;
+      }
+      .mds-operational-kpi-label {
+        color: #6F7895;
+        font-size: .82rem;
+        font-weight: 700;
+      }
+      .mds-operational-kpi-value {
+        color: #2F3453;
+        font-size: 1.65rem;
+        line-height: 1;
+        font-weight: 800;
+      }
+      .mds-operational-kpi[data-kpi="urgent"] .mds-operational-kpi-value {
+        color: #C19620;
+      }
+      @media (max-width: 980px) {
+        .mds-operational-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 560px) {
+        .mds-operational-summary-header { align-items: flex-start; flex-direction: column; gap: 4px; }
+        .mds-operational-summary-grid { grid-template-columns: 1fr; }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -183,7 +253,11 @@ export class App implements OnInit, OnDestroy {
     if (this.router.url.split('?')[0] !== '/dashboard') return;
 
     const actions = document.querySelector<HTMLElement>('.quick-actions');
-    if (!actions || actions.querySelector('[data-mds-public-menu-card]')) return;
+    if (!actions) return;
+
+    this.ensureOperationalSummary(actions);
+
+    if (actions.querySelector('[data-mds-public-menu-card]')) return;
 
     const card = document.createElement('a');
     card.className = 'action-card mds-public-menu-card';
@@ -205,5 +279,132 @@ export class App implements OnInit, OnDestroy {
 
     const insertBefore = actions.children.item(1);
     actions.insertBefore(card, insertBefore);
+  }
+
+  /**
+   * Operational summary for the commercial dashboard.
+   * Values come from existing tenant-scoped APIs; failed/unauthorized requests stay as an em dash.
+   */
+  private ensureOperationalSummary(actions: HTMLElement): void {
+    const parent = actions.parentElement;
+    if (!parent || parent.querySelector('[data-mds-operational-summary]')) return;
+
+    const user = this.api.getCurrentUser();
+    if (!user) return;
+
+    const canViewTables = this.permissions.canAccessRoute(user, '/tables');
+    const canViewReports = this.permissions.hasPermission(user, 'report:read');
+
+    const section = document.createElement('section');
+    section.className = 'mds-operational-summary';
+    section.dataset['mdsOperationalSummary'] = 'true';
+    section.setAttribute('aria-labelledby', 'mds-operational-summary-title');
+
+    const tableCard = canViewTables
+      ? `
+        <a class="mds-operational-kpi" data-kpi="tables" href="/tables">
+          <span class="mds-operational-kpi-label">Mesas em atendimento</span>
+          <strong class="mds-operational-kpi-value" data-kpi-value="tables">…</strong>
+        </a>`
+      : '';
+    const reportCards = canViewReports
+      ? `
+        <a class="mds-operational-kpi" data-kpi="sales" href="/reports">
+          <span class="mds-operational-kpi-label">Vendas hoje</span>
+          <strong class="mds-operational-kpi-value" data-kpi-value="sales">…</strong>
+        </a>
+        <a class="mds-operational-kpi" data-kpi="ticket" href="/reports">
+          <span class="mds-operational-kpi-label">Ticket médio</span>
+          <strong class="mds-operational-kpi-value" data-kpi-value="ticket">…</strong>
+        </a>`
+      : '';
+
+    section.innerHTML = `
+      <div class="mds-operational-summary-header">
+        <h2 id="mds-operational-summary-title" class="mds-operational-summary-title">Operação agora</h2>
+        <p class="mds-operational-summary-caption">Indicadores do restaurante atualizados com dados reais</p>
+      </div>
+      <div class="mds-operational-summary-grid">
+        <a class="mds-operational-kpi" data-kpi="urgent" href="/staff/orders">
+          <span class="mds-operational-kpi-label">Pedidos urgentes</span>
+          <strong class="mds-operational-kpi-value" data-kpi-value="urgent">…</strong>
+        </a>
+        ${tableCard}
+        ${reportCards}
+      </div>
+    `;
+
+    parent.insertBefore(section, actions);
+
+    this.api.getOrders().subscribe({
+      next: (orders) => {
+        const urgent = orders.filter((order) => order.staff_urgent === true).length;
+        this.setOperationalKpi(section, 'urgent', String(urgent));
+      },
+      error: () => this.setOperationalKpi(section, 'urgent', '—'),
+    });
+
+    if (canViewTables) {
+      this.api.getTablesWithStatus().subscribe({
+        next: (tables) => {
+          const activeStatuses = new Set(['occupied', 'open_order', 'ready_to_serve']);
+          const active = tables.filter((table) =>
+            table.operational_status != null && activeStatuses.has(table.operational_status)
+          ).length;
+          this.setOperationalKpi(section, 'tables', String(active));
+        },
+        error: () => this.setOperationalKpi(section, 'tables', '—'),
+      });
+    }
+
+    if (canViewReports) {
+      this.loadTodaySalesKpis(section);
+    }
+  }
+
+  private loadTodaySalesKpis(section: HTMLElement): void {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const loadReport = (currencyLabel: string) => {
+      this.api.getSalesReports(today, today).subscribe({
+        next: (report) => {
+          this.setOperationalKpi(
+            section,
+            'sales',
+            this.formatOperationalMoney(report.summary?.total_revenue_cents, currencyLabel),
+          );
+          this.setOperationalKpi(
+            section,
+            'ticket',
+            this.formatOperationalMoney(report.summary?.average_revenue_per_order_cents, currencyLabel),
+          );
+        },
+        error: () => {
+          this.setOperationalKpi(section, 'sales', '—');
+          this.setOperationalKpi(section, 'ticket', '—');
+        },
+      });
+    };
+
+    this.api.getTenantSettings().subscribe({
+      next: (settings) => loadReport((settings.currency || settings.currency_code || '').trim()),
+      error: () => loadReport(''),
+    });
+  }
+
+  private setOperationalKpi(section: HTMLElement, key: string, value: string): void {
+    const element = section.querySelector<HTMLElement>(`[data-kpi-value="${key}"]`);
+    if (element) element.textContent = value;
+  }
+
+  private formatOperationalMoney(value: unknown, currencyLabel: string): string {
+    const cents = Number(value);
+    if (!Number.isFinite(cents)) return '—';
+    const amount = (cents / 100).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return currencyLabel ? `${currencyLabel} ${amount}` : amount;
   }
 }
