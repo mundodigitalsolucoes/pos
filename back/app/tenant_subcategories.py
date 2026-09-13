@@ -1,9 +1,10 @@
-"""Tenant-scoped custom product subcategories (persisted on tenant.custom_subcategories)."""
+"""Tenant-scoped custom product categories and subcategories."""
 
 from __future__ import annotations
 
 from copy import deepcopy
 
+from sqlalchemy import inspect, text
 from sqlmodel import Session, select
 
 from . import models
@@ -74,12 +75,32 @@ def product_subcategories(session: Session, tenant_id: int) -> dict[str, set[str
     for product in products:
         cat = (product.category or "").strip()
         sub = (product.subcategory or "").strip()
-        if not cat or not sub:
+        if not cat:
             continue
         if cat not in categories:
             categories[cat] = set()
-        categories[cat].add(sub)
+        if sub:
+            categories[cat].add(sub)
     return categories
+
+
+def tenant_catalog_categories(session: Session, tenant_id: int) -> list[str]:
+    """Active top-level categories explicitly maintained by the restaurant."""
+    bind = session.get_bind()
+    if not inspect(bind).has_table("tenant_catalog_category"):
+        return []
+    rows = session.execute(
+        text(
+            """
+            SELECT name
+            FROM tenant_catalog_category
+            WHERE tenant_id = :tenant_id AND is_active = TRUE
+            ORDER BY sort_order ASC, LOWER(name) ASC, id ASC
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).all()
+    return [str(row[0]).strip() for row in rows if row and str(row[0]).strip()]
 
 
 def merge_category_subcategory_maps(
@@ -104,7 +125,7 @@ def merge_category_subcategory_maps(
 
 
 def tenant_categories_for_ui(session: Session, tenant_id: int) -> dict[str, list[str]]:
-    """Catalog + tenant custom + product-derived subcategories for staff UI."""
+    """Catalog + tenant custom + product-derived categories/subcategories for staff UI."""
     tenant = session.get(models.Tenant, tenant_id)
     custom = normalize_custom_subcategories(
         tenant.custom_subcategories if tenant else None
@@ -114,12 +135,19 @@ def tenant_categories_for_ui(session: Session, tenant_id: int) -> dict[str, list
         {k: set(v) for k, v in custom.items()},
         product_subcategories(session, tenant_id),
     )
-    # Always include all five standard categories (empty list when no subcategories yet).
+
     result: dict[str, list[str]] = {
         cat: merged.get(cat, []) for cat in STANDARD_CATEGORY_ORDER
     }
+
+    # Explicit tenant categories are shown even before the first product is assigned.
+    for cat in tenant_catalog_categories(session, tenant_id):
+        normalized = normalize_product_category(cat) or cat
+        if normalized not in result:
+            result[normalized] = merged.get(normalized, [])
+
     for cat, subs in sorted(merged.items()):
-        if cat not in _STANDARD_CATEGORY_SET:
+        if cat not in result:
             result[cat] = subs
     return result
 
