@@ -82,6 +82,11 @@
   outline-offset: 2px !important;
 }
 
+/* Upstream support links are kept in source history/licensing context, not in the commercial UI. */
+.help-section:has(a[href*="github.com/satisfecho/pos"]) {
+  display: none !important;
+}
+
 @media (max-width: 599px) {
   .sidebar .logo-container::before {
     width: 140px !important;
