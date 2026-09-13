@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from . import models
@@ -169,6 +170,97 @@ def _translated_description(
     return translated or canonical
 
 
+def _public_modifier_groups_by_product(
+    session: Session,
+    tenant_id: int,
+) -> dict[int, list[dict]]:
+    """Active reusable complement groups/options indexed by legacy Product.id."""
+    group_rows = session.execute(
+        text(
+            """
+            SELECT l.product_id,
+                   g.id AS group_id,
+                   g.name AS group_name,
+                   g.min_select,
+                   g.max_select,
+                   g.is_required,
+                   g.sort_order AS group_sort_order
+            FROM catalog_product_modifier_group l
+            JOIN catalog_modifier_group g
+              ON g.id = l.group_id
+             AND g.tenant_id = l.tenant_id
+            JOIN product p
+              ON p.id = l.product_id
+             AND p.tenant_id = l.tenant_id
+            WHERE l.tenant_id = :tenant_id
+              AND g.is_active = TRUE
+            ORDER BY l.product_id,
+                     l.sort_order,
+                     g.sort_order,
+                     LOWER(g.name),
+                     g.id
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).mappings().all()
+    if not group_rows:
+        return {}
+
+    option_rows = session.execute(
+        text(
+            """
+            SELECT o.group_id,
+                   o.id,
+                   o.name,
+                   o.price_delta_cents,
+                   o.sort_order
+            FROM catalog_modifier_option o
+            JOIN catalog_modifier_group g
+              ON g.id = o.group_id
+             AND g.tenant_id = o.tenant_id
+            WHERE o.tenant_id = :tenant_id
+              AND o.is_active = TRUE
+              AND g.is_active = TRUE
+            ORDER BY o.group_id,
+                     o.sort_order,
+                     LOWER(o.name),
+                     o.id
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).mappings().all()
+
+    options_by_group: dict[int, list[dict]] = {}
+    for row in option_rows:
+        group_id = int(row["group_id"])
+        options_by_group.setdefault(group_id, []).append(
+            {
+                "id": int(row["id"]),
+                "name": row["name"],
+                "price_delta_cents": int(row["price_delta_cents"] or 0),
+            }
+        )
+
+    groups_by_product: dict[int, list[dict]] = {}
+    for row in group_rows:
+        group_id = int(row["group_id"])
+        options = options_by_group.get(group_id, [])
+        if not options:
+            continue
+        product_id = int(row["product_id"])
+        groups_by_product.setdefault(product_id, []).append(
+            {
+                "id": group_id,
+                "name": row["group_name"],
+                "min_select": int(row["min_select"] or 0),
+                "max_select": int(row["max_select"] or 1),
+                "is_required": bool(row["is_required"]),
+                "options": options,
+            }
+        )
+    return groups_by_product
+
+
 def _load_flat_products(
     session: Session,
     tenant_id: int,
@@ -189,6 +281,7 @@ def _load_flat_products(
 
     tenant = session.get(models.Tenant, tenant_id)
     today = _tenant_today(tenant)
+    modifier_groups_by_product = _public_modifier_groups_by_product(session, tenant_id)
 
     tenant_products = [
         tp
@@ -242,20 +335,23 @@ def _load_flat_products(
             lang,
         )
 
-        products.append(
-            {
-                "id": tp.id,
-                "name": name,
-                "price_cents": tp.price_cents,
-                "price_formatted": format_public_price(tp.price_cents, lang),
-                "description": description,
-                "category": category,
-                "subcategory": subcategory,
-                "image_url": _resolve_tenant_product_image(session, tenant_id, tp),
-                "available": True,
-                **stock_fields,
-            }
-        )
+        public_product = {
+            "id": tp.id,
+            "name": name,
+            "price_cents": tp.price_cents,
+            "price_formatted": format_public_price(tp.price_cents, lang),
+            "description": description,
+            "category": category,
+            "subcategory": subcategory,
+            "image_url": _resolve_tenant_product_image(session, tenant_id, tp),
+            "available": True,
+            **stock_fields,
+        }
+        if tp.product_id is not None:
+            modifier_groups = modifier_groups_by_product.get(tp.product_id, [])
+            if modifier_groups:
+                public_product["modifier_groups"] = modifier_groups
+        products.append(public_product)
 
     for lp in legacy_products:
         if lp.id in linked_legacy_product_ids:
@@ -268,20 +364,22 @@ def _load_flat_products(
         )
         from .product_stock import product_stock_alert_payload
 
-        products.append(
-            {
-                "id": lp.id,
-                "name": name,
-                "price_cents": lp.price_cents,
-                "price_formatted": format_public_price(lp.price_cents, lang),
-                "description": description,
-                "category": lp.category,
-                "subcategory": lp.subcategory,
-                "image_url": resolve_product_image_url(tenant_id, lp.image_filename),
-                "available": True,
-                **product_stock_alert_payload(lp),
-            }
-        )
+        public_product = {
+            "id": lp.id,
+            "name": name,
+            "price_cents": lp.price_cents,
+            "price_formatted": format_public_price(lp.price_cents, lang),
+            "description": description,
+            "category": lp.category,
+            "subcategory": lp.subcategory,
+            "image_url": resolve_product_image_url(tenant_id, lp.image_filename),
+            "available": True,
+            **product_stock_alert_payload(lp),
+        }
+        modifier_groups = modifier_groups_by_product.get(lp.id, [])
+        if modifier_groups:
+            public_product["modifier_groups"] = modifier_groups
+        products.append(public_product)
 
     eligible = promo_svc.eligible_promos(
         session,
