@@ -188,7 +188,7 @@ export class PromoSettingsComponent implements OnInit {
 
   draftName = '';
   draftPercent = 20;
-  draftCategory = 'Beverages';
+  draftCategory = 'Bebidas';
   draftChannels = '';
   draftStartTime = '';
   draftEndTime = '';
@@ -209,7 +209,7 @@ export class PromoSettingsComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err: { error?: { detail?: string } }) => {
-        this.error.set(err?.error?.detail || 'Failed to load promos');
+        this.error.set(err?.error?.detail || 'Não foi possível carregar as promoções.');
         this.loading.set(false);
       },
     });
@@ -250,7 +250,7 @@ export class PromoSettingsComponent implements OnInit {
       },
       error: (err: { error?: { detail?: string } }) => {
         this.saving.set(false);
-        this.error.set(err?.error?.detail || 'Create failed');
+        this.error.set(err?.error?.detail || 'Não foi possível criar a promoção.');
       },
     });
   }
@@ -259,14 +259,14 @@ export class PromoSettingsComponent implements OnInit {
     const checked = (event.target as HTMLInputElement).checked;
     this.api.updatePromo(p.id, { enabled: checked }).subscribe({
       next: () => this.reload(),
-      error: () => this.error.set('Update failed'),
+      error: () => this.error.set('Não foi possível atualizar a promoção.'),
     });
   }
 
   disable(p: PricePromotion): void {
     this.api.deletePromo(p.id).subscribe({
       next: () => this.reload(),
-      error: () => this.error.set('Disable failed'),
+      error: () => this.error.set('Não foi possível desativar a promoção.'),
     });
   }
 }
