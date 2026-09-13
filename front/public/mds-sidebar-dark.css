@@ -19,7 +19,7 @@
   position: relative;
 }
 
-/* Marca sem slogan: usa o header horizontal MDS Food e ganha presença no topo. */
+/* Marca negativa MDS Food para contraste correto sobre a sidebar escura. */
 .sidebar .logo-container {
   min-height: 92px !important;
   padding-top: 14px !important;
@@ -27,7 +27,7 @@
 }
 
 .sidebar .logo-container::before {
-  background-image: url('/logo-mds-food-header.png') !important;
+  background-image: url('/logo-mds-food-negativa.png') !important;
   background-position: left center !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
@@ -218,7 +218,7 @@
   }
 
   .mobile-header .mobile-brand::before {
-    background-image: url('/logo-mds-food-header.png') !important;
+    background-image: url('/logo-mds-food-negativa.png') !important;
     background-size: contain !important;
   }
 
