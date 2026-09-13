@@ -81,7 +81,8 @@ export class App implements OnInit, OnDestroy {
     const style = document.createElement('style');
     style.id = 'mds-public-menu-shortcut-styles';
     style.textContent = `
-      #staff-sidebar-nav .mds-public-menu-link {
+      #staff-sidebar-nav .mds-public-menu-link,
+      #staff-sidebar-nav .mds-commercial-link {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -92,13 +93,18 @@ export class App implements OnInit, OnDestroy {
         text-decoration: none;
         border-left: 3px solid transparent;
       }
-      #staff-sidebar-nav .mds-public-menu-link:hover {
+      #staff-sidebar-nav .mds-public-menu-link:hover,
+      #staff-sidebar-nav .mds-commercial-link:hover {
         background: rgba(55, 75, 137, .08);
         border-left-color: #D6A92F;
         color: #2F3453;
       }
-      #staff-sidebar-nav .mds-public-menu-link svg {
+      #staff-sidebar-nav .mds-public-menu-link svg,
+      #staff-sidebar-nav .mds-commercial-link svg {
         flex: 0 0 auto;
+      }
+      #staff-sidebar-nav .mds-commercial-link {
+        font-weight: 600;
       }
       .quick-actions .mds-public-menu-card {
         display: flex;
@@ -217,21 +223,25 @@ export class App implements OnInit, OnDestroy {
 
   /**
    * Keep the public digital menu visible from the operational area.
-   * This is intentionally added at the application shell so every staff page
-   * gets the shortcut without coupling the public menu to a specific module.
+   * Owner/admin use the internal commercial area; other staff keep the public preview shortcut.
    */
   private ensureStaffShortcuts(): void {
     const tenantId = this.currentTenantId;
     if (tenantId == null) return;
 
+    const user = this.api.getCurrentUser();
+    const isAdmin = this.permissions.isAdmin(user);
     const publicMenuHref = `/public-menu/${tenantId}`;
+    const menuHref = isAdmin ? '/cardapio-online' : publicMenuHref;
     const nav = document.querySelector<HTMLElement>('#staff-sidebar-nav');
     if (nav && !nav.querySelector('[data-mds-public-menu-link]')) {
       const link = document.createElement('a');
       link.className = 'nav-link mds-public-menu-link';
-      link.href = publicMenuHref;
-      link.target = '_blank';
-      link.rel = 'noopener';
+      link.href = menuHref;
+      if (!isAdmin) {
+        link.target = '_blank';
+        link.rel = 'noopener';
+      }
       link.dataset['mdsPublicMenuLink'] = 'true';
       link.innerHTML = `
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -250,6 +260,37 @@ export class App implements OnInit, OnDestroy {
       }
     }
 
+    if (nav && isAdmin && !nav.querySelector('[data-mds-commercial-links]')) {
+      const links = [
+        { href: '/fidelidade', label: 'Fidelidade', icon: '<path d="M12 21s-7-4.35-7-10a4 4 0 017-2.65A4 4 0 0119 11c0 5.65-7 10-7 10z"/>' },
+        { href: '/promocoes', label: 'Cupons e promoções', icon: '<path d="M20 12l-8 8-8-8V4h8z"/><circle cx="9" cy="8" r="1"/>' },
+        { href: '/integracoes', label: 'Integrações', icon: '<path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/>' },
+      ];
+      const fragment = document.createDocumentFragment();
+      const marker = document.createElement('span');
+      marker.hidden = true;
+      marker.dataset['mdsCommercialLinks'] = 'true';
+      fragment.appendChild(marker);
+
+      for (const item of links) {
+        const commercialLink = document.createElement('a');
+        commercialLink.className = 'nav-link mds-commercial-link';
+        commercialLink.href = item.href;
+        commercialLink.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${item.icon}</svg>
+          <span>${item.label}</span>
+        `;
+        fragment.appendChild(commercialLink);
+      }
+
+      const menuLink = nav.querySelector<HTMLElement>('[data-mds-public-menu-link]');
+      if (menuLink?.nextSibling) {
+        nav.insertBefore(fragment, menuLink.nextSibling);
+      } else {
+        nav.appendChild(fragment);
+      }
+    }
+
     if (this.router.url.split('?')[0] !== '/dashboard') return;
 
     const actions = document.querySelector<HTMLElement>('.quick-actions');
@@ -261,9 +302,11 @@ export class App implements OnInit, OnDestroy {
 
     const card = document.createElement('a');
     card.className = 'action-card mds-public-menu-card';
-    card.href = publicMenuHref;
-    card.target = '_blank';
-    card.rel = 'noopener';
+    card.href = menuHref;
+    if (!isAdmin) {
+      card.target = '_blank';
+      card.rel = 'noopener';
+    }
     card.dataset['mdsPublicMenuCard'] = 'true';
     card.innerHTML = `
       <div class="action-icon mds-public-menu-icon">
@@ -274,7 +317,7 @@ export class App implements OnInit, OnDestroy {
         </svg>
       </div>
       <span class="action-label">Cardápio Online</span>
-      <span class="action-desc">Visualize o cardápio público do seu restaurante</span>
+      <span class="action-desc">${isAdmin ? 'Gerencie e compartilhe os canais públicos do restaurante' : 'Visualize o cardápio público do seu restaurante'}</span>
     `;
 
     const insertBefore = actions.children.item(1);
