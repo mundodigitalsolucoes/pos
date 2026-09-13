@@ -26,6 +26,17 @@ interface CatalogModifierGroup {
   options: CatalogModifierOption[];
 }
 
+interface CatalogComboItem {
+  product_id: number;
+  quantity: number;
+  name: string;
+}
+
+interface CatalogComboComposition {
+  product_id: number;
+  items: CatalogComboItem[];
+}
+
 type DeliveryCatalogProduct = PublicTenantMenuProduct & {
   modifier_groups?: CatalogModifierGroup[];
 };
@@ -68,6 +79,7 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
   readonly customizingProduct = signal<DeliveryCatalogProduct | null>(null);
   readonly modifierSelections = signal<Record<number, number[]>>({});
   readonly customizationError = signal<string | null>(null);
+  readonly comboCompositions = signal<Record<number, CatalogComboItem[]>>({});
 
   readonly catalogCart = computed(
     () => this.cart() as unknown as CatalogCartLine[],
@@ -89,6 +101,29 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
     const fee = this.deliveryConfig()?.delivery_fee_cents ?? 0;
     return this.cartSubtotalCents() + Math.max(0, fee);
   });
+
+  override ngOnInit(): void {
+    super.ngOnInit();
+    const tenantId = this.tenantId();
+    if (!tenantId) return;
+    const base = (environment.apiUrl || '').replace(/\/$/, '');
+    this.catalogHttp
+      .get<CatalogComboComposition[]>(`${base}/tenant/subcategories/public/combo-compositions/${tenantId}`)
+      .subscribe({
+        next: (rows) => {
+          const mapped: Record<number, CatalogComboItem[]> = {};
+          for (const row of rows) {
+            mapped[row.product_id] = Array.isArray(row.items) ? row.items : [];
+          }
+          this.comboCompositions.set(mapped);
+        },
+        error: () => this.comboCompositions.set({}),
+      });
+  }
+
+  comboItems(product: PublicTenantMenuProduct): CatalogComboItem[] {
+    return this.comboCompositions()[product.id] ?? [];
+  }
 
   modifierGroups(product: PublicTenantMenuProduct): CatalogModifierGroup[] {
     const groups = (product as DeliveryCatalogProduct).modifier_groups;
