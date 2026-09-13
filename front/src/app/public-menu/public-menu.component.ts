@@ -30,6 +30,21 @@ interface PublicCatalogMerchandising {
   labels: string[];
 }
 
+interface PublicModifierOption {
+  id: number;
+  name: string;
+  price_delta_cents: number;
+}
+
+interface PublicModifierGroup {
+  id: number;
+  name: string;
+  min_select: number;
+  max_select: number;
+  is_required: boolean;
+  options: PublicModifierOption[];
+}
+
 @Component({
   selector: 'app-public-menu',
   standalone: true,
@@ -243,6 +258,35 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     const code = this.currencyLabel();
     if (!code) return amount;
     return `${amount} ${code}`;
+  }
+
+  modifierGroups(product: unknown): PublicModifierGroup[] {
+    const raw = (product as { modifier_groups?: unknown })?.modifier_groups;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((group): group is PublicModifierGroup => {
+      if (!group || typeof group !== 'object') return false;
+      const candidate = group as Partial<PublicModifierGroup>;
+      return typeof candidate.id === 'number' && typeof candidate.name === 'string' && Array.isArray(candidate.options);
+    });
+  }
+
+  modifierRule(group: PublicModifierGroup): string {
+    if (group.is_required) {
+      if (group.min_select === group.max_select) return `Escolha ${group.min_select}`;
+      return `Escolha de ${group.min_select} a ${group.max_select}`;
+    }
+    if (group.max_select === 1) return 'Opcional · escolha até 1';
+    return `Opcional · escolha até ${group.max_select}`;
+  }
+
+  formatModifierPrice(cents: number): string {
+    if (!cents) return 'sem acréscimo';
+    const code = this.currencyLabel() || 'BRL';
+    try {
+      return `+ ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: code }).format(cents / 100)}`;
+    } catch {
+      return `+ R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+    }
   }
 
   isFeatured(productId: number): boolean {
