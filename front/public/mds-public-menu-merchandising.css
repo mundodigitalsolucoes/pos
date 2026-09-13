@@ -1,0 +1,29 @@
+.public-menu-product.mds-featured-product {
+  border-color: rgba(214, 169, 47, .45) !important;
+  box-shadow: 0 10px 26px rgba(214, 169, 47, .10);
+}
+
+.mds-product-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.mds-product-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(55, 75, 137, .08);
+  color: #374B89;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.mds-product-badge-featured {
+  background: rgba(214, 169, 47, .16);
+  color: #7B5A00;
+}
