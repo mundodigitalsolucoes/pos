@@ -269,7 +269,8 @@ def create_combo(
         name=_clean_name(body.name),
         price_cents=int(body.price_cents),
         description=(body.description or "").strip() or None,
-        category="Combos",
+        category="Main Course",
+        subcategory="Combos",
     )
     session.add(product)
     session.flush()
@@ -315,7 +316,8 @@ def update_combo(
         product.price_cents = int(body.price_cents)
     if body.description is not None:
         product.description = body.description.strip() or None
-    product.category = "Combos"
+    product.category = "Main Course"
+    product.subcategory = "Combos"
 
     if body.is_active is not None:
         session.execute(
