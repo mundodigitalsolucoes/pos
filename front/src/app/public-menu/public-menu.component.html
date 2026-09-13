@@ -124,6 +124,30 @@
                       @if (product.description?.trim()) {
                         <p class="public-menu-product-desc">{{ product.description }}</p>
                       }
+                      @if (modifierGroups(product).length > 0) {
+                        <div class="mds-product-modifiers">
+                          <div class="mds-product-modifiers-title">Personalize este item</div>
+                          @for (group of modifierGroups(product); track group.id) {
+                            <div class="mds-product-modifier-group">
+                              <div class="mds-product-modifier-head">
+                                <strong>{{ group.name }}</strong>
+                                <span>{{ modifierRule(group) }}</span>
+                              </div>
+                              <div class="mds-product-modifier-options">
+                                @for (option of group.options; track option.id) {
+                                  <span class="mds-product-modifier-option">
+                                    {{ option.name }}
+                                    <small>{{ formatModifierPrice(option.price_delta_cents) }}</small>
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                          }
+                          <a [routerLink]="['/delivery', tenantId()]" class="mds-product-customize-link">
+                            Escolher opções ao pedir
+                          </a>
+                        </div>
+                      }
                     </div>
                   </li>
                 }
