@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
 import { ConnectivityService } from '../services/connectivity.service';
 import {
   OfflineOrderQueueService,
@@ -12,11 +11,11 @@ import { ApiService } from '../services/api.service';
 @Component({
   selector: 'app-offline-cash-sale',
   standalone: true,
-  imports: [FormsModule, TranslateModule],
+  imports: [FormsModule],
   template: `
     <section class="offline-cash" [class.offline-cash--warn]="!connectivity.isOnline()">
       <div class="offline-cash-head">
-        <h2>{{ 'OFFLINE.CASH_SALE_TITLE' | translate }}</h2>
+        <h2>Venda rápida</h2>
         <span
           class="offline-status"
           [class.offline-status--ok]="connectivity.isOnline()"
@@ -24,52 +23,60 @@ import { ApiService } from '../services/api.service';
           role="status"
         >
           @if (connectivity.status() === 'online') {
-            {{ 'OFFLINE.STATUS_ONLINE' | translate }}
+            Online
           } @else if (connectivity.status() === 'degraded') {
-            {{ 'OFFLINE.STATUS_DEGRADED' | translate }}
+            Servidor indisponível
           } @else {
-            {{ 'OFFLINE.STATUS_OFFLINE' | translate }}
+            Offline
           }
         </span>
         @if (queue.pendingCount() > 0) {
-          <span class="offline-pending">{{ 'OFFLINE.PENDING_SYNC' | translate: { count: queue.pendingCount() } }}</span>
+          <span class="offline-pending">{{ queue.pendingCount() }} aguardando sincronização</span>
         }
       </div>
-      <p class="offline-cash-hint">{{ 'OFFLINE.CASH_SALE_HINT' | translate }}</p>
-      <p class="offline-cash-hint offline-cash-hint--secondary">{{ 'OFFLINE.CARD_DEFERRED_HINT' | translate }}</p>
+
+      <p class="offline-cash-hint">
+        Registre uma venda de retirada mesmo sem internet. Quando a conexão voltar, o pedido será sincronizado automaticamente.
+      </p>
+      <p class="offline-cash-hint offline-cash-hint--secondary">
+        Para cartão offline, o sistema registra a intenção de pagamento. A cobrança deve ser concluída no terminal quando o pedido sincronizar.
+      </p>
+
       @if (!hasTakeAway()) {
-        <p class="offline-cash-error">{{ 'OFFLINE.NO_TAKE_AWAY' | translate }}</p>
-      } @else if ((cacheProducts().length === 0)) {
-        <p class="offline-cash-error">{{ 'OFFLINE.NO_PRODUCT_CACHE' | translate }}</p>
+        <p class="offline-cash-error">
+          A mesa de retirada ainda não está disponível no cache. Conecte-se à internet e atualize os dados ou crie uma mesa “Retirada”.
+        </p>
+      } @else if (cacheProducts().length === 0) {
+        <p class="offline-cash-error">Nenhum produto disponível no cache. Conecte-se e atualize os produtos.</p>
         @if (connectivity.isOnline()) {
           <button type="button" class="btn btn-secondary btn-sm" (click)="refreshCache()">
-            {{ 'OFFLINE.REFRESH_CACHE' | translate }}
+            Atualizar produtos
           </button>
         }
       } @else {
         <div class="offline-cash-form">
           <label>
-            <span>{{ 'OFFLINE.PRODUCT' | translate }}</span>
+            <span>Produto</span>
             <select [(ngModel)]="productId">
-              <option [ngValue]="null">{{ 'OFFLINE.SELECT_PRODUCT' | translate }}</option>
+              <option [ngValue]="null">Selecione um produto</option>
               @for (p of cacheProducts(); track p.id) {
                 <option [ngValue]="p.id">{{ p.name }} ({{ formatPrice(p.price_cents) }})</option>
               }
             </select>
           </label>
           <label>
-            <span>{{ 'OFFLINE.QTY' | translate }}</span>
+            <span>Qtd.</span>
             <input type="number" min="1" max="99" [(ngModel)]="quantity" />
           </label>
           <label>
-            <span>{{ 'OFFLINE.CUSTOMER' | translate }}</span>
-            <input type="text" [(ngModel)]="customerName" [placeholder]="'OFFLINE.CUSTOMER_PH' | translate" />
+            <span>Cliente</span>
+            <input type="text" [(ngModel)]="customerName" placeholder="Nome do cliente (opcional)" />
           </label>
           <label>
-            <span>{{ 'OFFLINE.PAYMENT' | translate }}</span>
+            <span>Pagamento</span>
             <select [(ngModel)]="paymentIntent">
-              <option value="cash">{{ 'OFFLINE.PAYMENT_CASH' | translate }}</option>
-              <option value="card">{{ 'OFFLINE.PAYMENT_CARD_DEFERRED' | translate }}</option>
+              <option value="cash">Dinheiro</option>
+              <option value="card">Cartão — cobrar após sincronizar</option>
             </select>
           </label>
           <button
@@ -78,22 +85,24 @@ import { ApiService } from '../services/api.service';
             [disabled]="!canSubmit() || submitting()"
             (click)="submit()"
           >
-            {{ submitLabelKey() | translate }}
+            {{ submitLabel() }}
           </button>
         </div>
       }
+
       @if (messageKey()) {
-        <p class="offline-cash-msg" role="status">{{ messageKey()! | translate }}</p>
+        <p class="offline-cash-msg" role="status">{{ messageText(messageKey()!) }}</p>
       }
+
       @if (recent().length > 0) {
         <ul class="offline-queue-list">
           @for (q of recent(); track q.idempotency_key) {
             <li [class]="'st-' + q.status">
-              {{ q.product_names?.join(', ') || '—' }} ×{{ q.items[0]?.quantity || 1 }}
-              · {{ q.payment_intent === 'card' ? ('OFFLINE.PAYMENT_CARD_DEFERRED' | translate) : ('OFFLINE.PAYMENT_CASH' | translate) }}
-              — {{ q.status }}
+              {{ q.product_names?.join(', ') || 'Pedido' }} ×{{ q.items[0]?.quantity || 1 }}
+              · {{ q.payment_intent === 'card' ? 'Cartão' : 'Dinheiro' }}
+              — {{ queueStatusLabel(q.status) }}
               @if (q.order_id) { (#{{ q.order_id }}) }
-              @if (q.needs_payment) { — {{ 'OFFLINE.NEEDS_CARD' | translate }} }
+              @if (q.needs_payment) { — pagamento por cartão pendente }
               @if (q.error) { — {{ q.error }} }
             </li>
           }
@@ -104,9 +113,9 @@ import { ApiService } from '../services/api.service';
   styles: `
     .offline-cash {
       margin-bottom: 1rem;
-      padding: 0.75rem 1rem;
-      border: 1px solid var(--color-border, #e5e7eb);
-      border-radius: 6px;
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(47, 52, 83, .14);
+      border-radius: 10px;
       background: var(--color-surface, #fff);
     }
     .offline-cash--warn {
@@ -122,13 +131,14 @@ import { ApiService } from '../services/api.service';
     .offline-cash-head h2 {
       margin: 0;
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 700;
+      color: #2F3453;
     }
     .offline-status {
       font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
     }
     .offline-status--ok {
       background: #d1fae5;
@@ -143,17 +153,19 @@ import { ApiService } from '../services/api.service';
       color: #92400e;
     }
     .offline-cash-hint {
-      margin: 0.35rem 0 0.35rem;
+      margin: 0.4rem 0 0.3rem;
       font-size: 0.8125rem;
       color: var(--color-text-muted, #6b7280);
+      line-height: 1.45;
     }
     .offline-cash-hint--secondary {
       margin-top: 0;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.8rem;
     }
     .offline-cash-error {
       color: #991b1b;
       font-size: 0.875rem;
+      line-height: 1.45;
     }
     .offline-cash-form {
       display: flex;
@@ -166,22 +178,25 @@ import { ApiService } from '../services/api.service';
       flex-direction: column;
       gap: 0.25rem;
       font-size: 0.75rem;
+      color: #2F3453;
+      font-weight: 600;
     }
     .offline-cash-form select,
     .offline-cash-form input[type='text'],
     .offline-cash-form input[type='number'] {
       min-width: 8rem;
-      padding: 0.35rem 0.5rem;
+      padding: 0.45rem 0.6rem;
       border: 1px solid var(--color-border, #d1d5db);
-      border-radius: 4px;
+      border-radius: 7px;
+      background: #fff;
     }
     .offline-cash-msg {
-      margin: 0.5rem 0 0;
+      margin: 0.6rem 0 0;
       font-size: 0.875rem;
       color: #065f46;
     }
     .offline-queue-list {
-      margin: 0.5rem 0 0;
+      margin: 0.7rem 0 0;
       padding-left: 1.1rem;
       font-size: 0.75rem;
       color: #4b5563;
@@ -194,7 +209,7 @@ import { ApiService } from '../services/api.service';
     }
     .btn-sm {
       font-size: 0.8125rem;
-      padding: 0.25rem 0.5rem;
+      padding: 0.3rem 0.6rem;
     }
   `,
 })
@@ -232,12 +247,12 @@ export class OfflineCashSaleComponent implements OnInit {
     return this.canUse() && this.productId != null && this.quantity >= 1 && this.hasTakeAway();
   }
 
-  submitLabelKey(): string {
+  submitLabel(): string {
     const online = this.connectivity.isOnline();
     if (this.paymentIntent === 'card') {
-      return online ? 'OFFLINE.RECORD_CARD' : 'OFFLINE.QUEUE_CARD';
+      return online ? 'Registrar venda no cartão' : 'Salvar venda no cartão';
     }
-    return online ? 'OFFLINE.RECORD_CASH' : 'OFFLINE.QUEUE_CASH';
+    return online ? 'Registrar venda em dinheiro' : 'Salvar venda em dinheiro';
   }
 
   refreshCache(): void {
@@ -246,6 +261,27 @@ export class OfflineCashSaleComponent implements OnInit {
 
   formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);
+  }
+
+  queueStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      pending: 'aguardando sincronização',
+      syncing: 'sincronizando',
+      synced: 'sincronizado',
+      failed: 'falha na sincronização',
+    };
+    return labels[status] ?? 'aguardando';
+  }
+
+  messageText(key: string): string {
+    const messages: Record<string, string> = {
+      'OFFLINE.ENQUEUE_FAILED': 'Não foi possível registrar a venda. Atualize os dados e tente novamente.',
+      'OFFLINE.QUEUED_CARD_ONLINE': 'Venda registrada. O pagamento no cartão ficou pendente para cobrança.',
+      'OFFLINE.QUEUED_CARD_OFFLINE': 'Venda salva offline. O pagamento no cartão deverá ser cobrado após a sincronização.',
+      'OFFLINE.QUEUED_ONLINE': 'Venda registrada com sucesso.',
+      'OFFLINE.QUEUED_OFFLINE': 'Venda salva offline e será sincronizada quando a conexão voltar.',
+    };
+    return messages[key] ?? 'Operação registrada.';
   }
 
   submit(): void {
