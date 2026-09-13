@@ -225,6 +225,27 @@ def delete_catalog_category(
     return {"deleted": True}
 
 
+@router.get("/public/catalog-merchandising/{tenant_id}")
+def public_catalog_merchandising(
+    tenant_id: int,
+    session: Session = Depends(get_session),
+) -> list[dict]:
+    rows = session.execute(
+        text(
+            """
+            SELECT m.product_id, m.is_featured, m.labels
+            FROM product_catalog_merchandising m
+            JOIN product p ON p.id = m.product_id AND p.tenant_id = m.tenant_id
+            WHERE m.tenant_id = :tenant_id
+              AND (m.is_featured = TRUE OR jsonb_array_length(m.labels) > 0)
+            ORDER BY m.is_featured DESC, m.product_id ASC
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
 @router.get("/catalog-merchandising")
 def list_catalog_merchandising(
     current_user: Annotated[models.User, Depends(require_permission(Permission.PRODUCT_WRITE))],
