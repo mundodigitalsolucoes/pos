@@ -1,5 +1,7 @@
 (() => {
   const translations = {
+    'CATALOG.ALL_CATEGORIES': 'Todas as categorias',
+
     'SETTINGS.LOYALTY_TITLE': 'Programa de fidelidade',
     'SETTINGS.LOYALTY_SUBTITLE': 'Configure pontos, recompensas e benefícios para seus clientes.',
     'SETTINGS.LOYALTY_SECTION_PROGRAM': 'Configuração do programa',
