@@ -104,6 +104,9 @@ export const routes: Routes = [
   { path: 'products', canActivate: [authGuard], loadComponent: () => import('./products/products.component').then(m => m.ProductsComponent) },
   { path: 'catalog', canActivate: [authGuard, uiModuleGuard('providers')], loadComponent: () => import('./catalog/catalog.component').then(m => m.CatalogComponent) },
 
+  // MDS Food operational access to the tenant's existing public sales channels.
+  { path: 'cardapio-online', canActivate: [authGuard, adminGuard], loadComponent: () => import('./cardapio-online/cardapio-online.component').then(m => m.CardapioOnlineComponent) },
+
   // Register `tables/canvas` before `tables` (prefix matching would otherwise match `/tables/canvas` as `/tables`).
   {
     path: 'tables/canvas',
