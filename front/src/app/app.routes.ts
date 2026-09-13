@@ -77,7 +77,7 @@ export const routes: Routes = [
   },
   {
     path: 'delivery/:tenantId',
-    loadComponent: () => import('./delivery/delivery-checkout.component').then((m) => m.DeliveryCheckoutComponent),
+    loadComponent: () => import('./delivery/delivery-catalog-checkout.component').then((m) => m.DeliveryCatalogCheckoutComponent),
   },
   { path: 'book/:tenantId', loadComponent: () => import('./book/book.component').then(m => m.BookComponent) },
   { path: 'waitlist/:tenantId', loadComponent: () => import('./waitlist-public/waitlist-public.component').then(m => m.WaitlistPublicComponent) },
