@@ -13,7 +13,7 @@ from sqlmodel import Session, SQLModel, select
 from . import models
 from .db import get_session
 from .permissions import Permission, require_permission
-from .rate_limits import admin_user_limit
+from .rate_limits import admin_user_limit, public_menu_ip_limit
 
 router = APIRouter()
 
@@ -171,6 +171,78 @@ def _list_payload(session: Session, tenant_id: int) -> dict:
         if product.id is not None and int(product.id) not in combo_product_ids
     ]
     return {"combos": combos, "available_products": available_products}
+
+
+def _public_compositions(session: Session, tenant_id: int) -> list[dict]:
+    combo_rows = session.execute(
+        text(
+            """
+            SELECT c.id, c.product_id
+            FROM catalog_combo c
+            JOIN product p
+              ON p.id = c.product_id
+             AND p.tenant_id = c.tenant_id
+            WHERE c.tenant_id = :tenant_id
+              AND c.is_active = TRUE
+            ORDER BY c.id
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).mappings().all()
+    if not combo_rows:
+        return []
+
+    item_rows = session.execute(
+        text(
+            """
+            SELECT i.combo_id,
+                   i.component_product_id AS product_id,
+                   i.quantity,
+                   p.name
+            FROM catalog_combo_item i
+            JOIN catalog_combo c
+              ON c.id = i.combo_id
+             AND c.tenant_id = i.tenant_id
+             AND c.is_active = TRUE
+            JOIN product p
+              ON p.id = i.component_product_id
+             AND p.tenant_id = i.tenant_id
+            WHERE i.tenant_id = :tenant_id
+            ORDER BY i.combo_id, i.sort_order, i.id
+            """
+        ),
+        {"tenant_id": tenant_id},
+    ).mappings().all()
+    by_combo: dict[int, list[dict]] = {}
+    for row in item_rows:
+        by_combo.setdefault(int(row["combo_id"]), []).append(
+            {
+                "product_id": int(row["product_id"]),
+                "quantity": int(row["quantity"]),
+                "name": row["name"],
+            }
+        )
+    return [
+        {
+            "product_id": int(row["product_id"]),
+            "items": by_combo.get(int(row["id"]), []),
+        }
+        for row in combo_rows
+    ]
+
+
+@router.get("/public/combo-compositions/{tenant_id}")
+@public_menu_ip_limit()
+def public_combo_compositions(
+    request: Request,
+    response: Response,
+    tenant_id: int,
+    session: Session = Depends(get_session),
+) -> list[dict]:
+    tenant = session.get(models.Tenant, tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Restaurante não encontrado.")
+    return _public_compositions(session, tenant_id)
 
 
 @router.get("/combos")
