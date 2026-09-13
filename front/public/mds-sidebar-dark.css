@@ -11,17 +11,29 @@
 .sidebar {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 8px 0 26px rgba(22, 27, 53, 0.10) !important;
+  transition: width .22s ease, transform .22s ease !important;
 }
 
 .sidebar-header {
   border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  position: relative;
+}
+
+/* Marca sem slogan: usa o header horizontal MDS Food e ganha presença no topo. */
+.sidebar .logo-container {
+  min-height: 92px !important;
+  padding-top: 14px !important;
+  padding-bottom: 12px !important;
 }
 
 .sidebar .logo-container::before {
-  background-image: url('/logo-mds-food-negativa.png') !important;
+  background-image: url('/logo-mds-food-header.png') !important;
   background-position: left center !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
+  width: 150px !important;
+  height: 54px !important;
+  max-width: calc(100% - 18px) !important;
 }
 
 .sidebar .sidebar-org-name,
@@ -114,14 +126,100 @@
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
+.mds-sidebar-collapse-btn {
+  position: absolute;
+  right: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(47, 52, 83, .16);
+  background: #F7F5EF;
+  color: #2F3453;
+  box-shadow: 0 4px 12px rgba(22, 27, 53, .16);
+  cursor: pointer;
+  z-index: 20;
+}
+
+.mds-sidebar-collapse-btn:hover {
+  background: #D6A92F;
+  color: #2F3453;
+}
+
+@media (min-width: 769px) {
+  .layout.mds-sidebar-collapsed .sidebar {
+    width: 76px !important;
+  }
+
+  .layout.mds-sidebar-collapsed .main-content {
+    margin-left: 76px !important;
+  }
+
+  .layout.mds-sidebar-collapsed .sidebar .logo-container {
+    min-height: 70px !important;
+    padding: 10px 8px !important;
+  }
+
+  .layout.mds-sidebar-collapsed .sidebar .logo-container::before {
+    width: 48px !important;
+    height: 48px !important;
+    background-image: url('/favicon-negativa.png') !important;
+    background-position: center !important;
+  }
+
+  .layout.mds-sidebar-collapsed .sidebar .sidebar-org-name,
+  .layout.mds-sidebar-collapsed .sidebar-footer .user-info,
+  .layout.mds-sidebar-collapsed .sidebar-footer .logout-btn span,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav a span,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav button span,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .chevron,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .nav-submenu,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .nav-nested-submenu {
+    display: none !important;
+  }
+
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .nav-link,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .nav-section-header,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .mds-public-menu-link,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .mds-commercial-link,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .mds-company-nav-link,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .mds-cashier-nav-link,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .mds-delivery-nav-link,
+  .layout.mds-sidebar-collapsed #staff-sidebar-nav .mds-order-history-nav-link {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 0 !important;
+  }
+
+  .layout.mds-sidebar-collapsed .sidebar-footer {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .layout.mds-sidebar-collapsed .sidebar-footer .logout-btn {
+    justify-content: center !important;
+  }
+
+  .layout.mds-sidebar-collapsed .mds-sidebar-collapse-btn svg {
+    transform: rotate(180deg);
+  }
+}
+
 @media (max-width: 768px) {
+  .mds-sidebar-collapse-btn { display: none !important; }
+
   .mobile-header {
     background: #2F3453 !important;
     border-bottom-color: rgba(255, 255, 255, 0.08) !important;
   }
 
   .mobile-header .mobile-brand::before {
-    background-image: url('/logo-mds-food-negativa.png') !important;
+    background-image: url('/logo-mds-food-header.png') !important;
+    background-size: contain !important;
   }
 
   .mobile-header .header-org-name,
