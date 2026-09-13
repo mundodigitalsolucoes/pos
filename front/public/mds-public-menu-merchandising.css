@@ -27,3 +27,98 @@
   background: rgba(214, 169, 47, .16);
   color: #7B5A00;
 }
+
+.mds-product-modifiers {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(55, 75, 137, .14);
+  border-radius: 12px;
+  background: rgba(247, 245, 239, .72);
+}
+
+.mds-product-modifiers-title {
+  margin-bottom: 9px;
+  color: #2F3453;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mds-product-modifier-group + .mds-product-modifier-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(47, 52, 83, .08);
+}
+
+.mds-product-modifier-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.mds-product-modifier-head strong {
+  color: #2F3453;
+  font-size: 13px;
+}
+
+.mds-product-modifier-head span {
+  color: #667085;
+  font-size: 11px;
+  text-align: right;
+}
+
+.mds-product-modifier-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mds-product-modifier-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid rgba(55, 75, 137, .13);
+  border-radius: 8px;
+  background: #fff;
+  color: #374B89;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.mds-product-modifier-option small {
+  color: #667085;
+  font-size: 10px;
+}
+
+.mds-product-customize-link {
+  display: inline-flex;
+  margin-top: 10px;
+  color: #374B89;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.mds-product-customize-link:hover {
+  color: #2F3453;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .mds-product-modifier-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mds-product-modifier-head span {
+    text-align: left;
+  }
+
+  .mds-product-modifier-option {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
