@@ -39,9 +39,9 @@ import { ApiService, PricePromotion } from '../services/api.service';
             <span>{{ 'SETTINGS.PROMOS_CHANNELS' | translate }}</span>
             <select [(ngModel)]="draftChannels">
               <option value="">{{ 'SETTINGS.PROMOS_CHANNELS_ALL' | translate }}</option>
-              <option value="table">table</option>
-              <option value="satisfecho_delivery">satisfecho_delivery</option>
-              <option value="marketplace">marketplace</option>
+              <option value="table">Mesa / QR</option>
+              <option value="satisfecho_delivery">Delivery próprio</option>
+              <option value="marketplace">Marketplace</option>
             </select>
           </label>
           <label>
