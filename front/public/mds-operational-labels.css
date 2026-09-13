@@ -1,0 +1,22 @@
+/* MDS Food — nomenclatura comercial do Painel Operacional 2.0.
+ * Somente apresentação: rotas, permissões e regras de negócio permanecem inalteradas.
+ */
+
+.quick-actions > a.action-card[href="/tables"] > .action-label,
+.quick-actions > a.action-card[href="/bar"] > .action-label,
+.quick-actions > a.action-card[href="/products"] > .action-label,
+.quick-actions > a.action-card[href="/reports"] > .action-label {
+  font-size: 0 !important;
+}
+
+.quick-actions > a.action-card[href="/tables"] > .action-label::after,
+.quick-actions > a.action-card[href="/bar"] > .action-label::after,
+.quick-actions > a.action-card[href="/products"] > .action-label::after,
+.quick-actions > a.action-card[href="/reports"] > .action-label::after {
+  font-size: 1rem !important;
+}
+
+.quick-actions > a.action-card[href="/tables"] > .action-label::after { content: 'Mesas e comandas'; }
+.quick-actions > a.action-card[href="/bar"] > .action-label::after { content: 'Bar / bebidas'; }
+.quick-actions > a.action-card[href="/products"] > .action-label::after { content: 'Cardápio'; }
+.quick-actions > a.action-card[href="/reports"] > .action-label::after { content: 'Desempenho'; }
