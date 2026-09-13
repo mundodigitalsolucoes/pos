@@ -110,9 +110,69 @@
   margin-top: 0 !important;
 }
 
+/* Dashboard 2.0 — real operation first.
+ * This increment only reorders cards that already exist and keeps their original permission/module rules.
+ */
+.quick-actions::before {
+  content: 'Operação agora';
+  grid-column: 1 / -1;
+  order: 1;
+  margin: 0 0 0.15rem;
+  color: #2F3453;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.quick-actions > .action-card {
+  min-height: 156px;
+}
+
+.quick-actions > a.action-card[href="/staff/orders"] { order: 10; }
+.quick-actions > a.action-card[href="/tables"] { order: 20; }
+.quick-actions > a.action-card[href="/kitchen"] { order: 30; }
+.quick-actions > a.action-card[href="/bar"] { order: 40; }
+.quick-actions > a.action-card[href="/products"] { order: 50; }
+.quick-actions > a.action-card[href*="public-menu"] { order: 60; }
+.quick-actions > a.action-card[data-testid="dashboard-my-shift"] { order: 70; }
+.quick-actions > a.action-card[href="/customers"] { order: 100; }
+.quick-actions > a.action-card[href="/reports"] { order: 110; }
+.quick-actions > a.action-card[href="/reservations"] { order: 120; }
+.quick-actions > a.action-card[href="/inventory"] { order: 130; }
+.quick-actions > a.action-card[href="/catalog"] { order: 140; }
+.quick-actions > a.action-card[href="/working-plan"] { order: 150; }
+.quick-actions > a.action-card[href="/users"] { order: 160; }
+.quick-actions > a.action-card[href="/settings"] { order: 170; }
+.quick-actions > .action-card-whats-new { order: 900; }
+
+.quick-actions > a.action-card[href="/staff/orders"],
+.quick-actions > a.action-card[href="/tables"],
+.quick-actions > a.action-card[href="/kitchen"],
+.quick-actions > a.action-card[href="/bar"] {
+  border-top: 3px solid #D6A92F !important;
+  box-shadow: 0 8px 20px rgba(47, 52, 83, 0.06);
+}
+
+.quick-actions > a.action-card[href="/staff/orders"] .action-icon,
+.quick-actions > a.action-card[href="/tables"] .action-icon,
+.quick-actions > a.action-card[href="/kitchen"] .action-icon,
+.quick-actions > a.action-card[href="/bar"] .action-icon {
+  background: rgba(55, 75, 137, 0.10) !important;
+  color: #374B89 !important;
+}
+
+.quick-actions > .action-card-whats-new {
+  border-style: solid !important;
+  border-color: rgba(47, 52, 83, 0.12) !important;
+  background: #F7F5EF !important;
+}
+
 @media (max-width: 599px) {
   .sidebar .logo-container::before {
     width: 140px !important;
     height: 42px !important;
+  }
+
+  .quick-actions > .action-card {
+    min-height: auto;
   }
 }
