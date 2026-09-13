@@ -1,0 +1,135 @@
+/* MDS Food — sidebar comercial escura.
+ * Camada visual apenas: não altera rotas, módulos ou permissões.
+ */
+.sidebar,
+.sidebar-header,
+.sidebar-footer,
+#staff-sidebar-nav {
+  background: #2F3453 !important;
+}
+
+.sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 8px 0 26px rgba(22, 27, 53, 0.10) !important;
+}
+
+.sidebar-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar .logo-container::before {
+  background-image: url('/logo-mds-food-negativa.png') !important;
+  background-position: left center !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+}
+
+.sidebar .sidebar-org-name,
+.sidebar .user-email,
+.sidebar .user-role {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+#staff-sidebar-nav .nav-link,
+#staff-sidebar-nav .nav-section-header,
+#staff-sidebar-nav .nav-sublink,
+#staff-sidebar-nav .nav-nested-header,
+#staff-sidebar-nav .mds-public-menu-link,
+#staff-sidebar-nav .mds-commercial-link,
+#staff-sidebar-nav .mds-company-nav-link,
+#staff-sidebar-nav .mds-cashier-nav-link,
+#staff-sidebar-nav .mds-delivery-nav-link,
+#staff-sidebar-nav .mds-order-history-nav-link {
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+#staff-sidebar-nav .nav-link svg,
+#staff-sidebar-nav .nav-section-header svg,
+#staff-sidebar-nav .mds-public-menu-link svg,
+#staff-sidebar-nav .mds-commercial-link svg,
+#staff-sidebar-nav .mds-company-nav-link svg,
+#staff-sidebar-nav .mds-cashier-nav-link svg,
+#staff-sidebar-nav .mds-delivery-nav-link svg,
+#staff-sidebar-nav .mds-order-history-nav-link svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+#staff-sidebar-nav .nav-link:hover,
+#staff-sidebar-nav .nav-section-header:hover,
+#staff-sidebar-nav .nav-sublink:hover,
+#staff-sidebar-nav .nav-nested-header:hover,
+#staff-sidebar-nav .mds-public-menu-link:hover,
+#staff-sidebar-nav .mds-commercial-link:hover,
+#staff-sidebar-nav .mds-company-nav-link:hover,
+#staff-sidebar-nav .mds-cashier-nav-link:hover,
+#staff-sidebar-nav .mds-delivery-nav-link:hover,
+#staff-sidebar-nav .mds-order-history-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #FFFFFF !important;
+}
+
+#staff-sidebar-nav .nav-link.active,
+#staff-sidebar-nav .nav-sublink.active {
+  background: rgba(214, 169, 47, 0.16) !important;
+  color: #FFFFFF !important;
+  border-left-color: #D6A92F !important;
+}
+
+#staff-sidebar-nav .nav-link.active svg,
+#staff-sidebar-nav .nav-sublink.active svg {
+  color: #D6A92F !important;
+  stroke: #D6A92F !important;
+}
+
+#staff-sidebar-nav .nav-section-header,
+#staff-sidebar-nav .nav-nested-header {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+#staff-sidebar-nav .nav-submenu,
+#staff-sidebar-nav .nav-nested-submenu {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+.sidebar-footer {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar-footer .logout-btn {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.sidebar-footer .logout-btn:hover {
+  color: #FFFFFF !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar .close-btn {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.sidebar .close-btn:hover {
+  color: #FFFFFF !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-header {
+    background: #2F3453 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .mobile-header .mobile-brand::before {
+    background-image: url('/logo-mds-food-negativa.png') !important;
+  }
+
+  .mobile-header .header-org-name,
+  .mobile-header .menu-toggle {
+    color: #FFFFFF !important;
+  }
+
+  .mobile-header .menu-toggle span {
+    background: #FFFFFF !important;
+  }
+}
