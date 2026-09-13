@@ -19,7 +19,7 @@
   position: relative;
 }
 
-/* Marca negativa MDS Food para contraste correto sobre a sidebar escura. */
+/* Usa a arte horizontal sem slogan como máscara branca: negativa limpa, sem gerar novo asset. */
 .sidebar .logo-container {
   min-height: 92px !important;
   padding-top: 14px !important;
@@ -27,10 +27,16 @@
 }
 
 .sidebar .logo-container::before {
-  background-image: url('/logo-mds-food-negativa.png') !important;
-  background-position: left center !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
+  background: #FFFFFF !important;
+  background-image: none !important;
+  -webkit-mask-image: url('/logo-mds-food-header.png');
+  mask-image: url('/logo-mds-food-header.png');
+  -webkit-mask-position: left center;
+  mask-position: left center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   width: 150px !important;
   height: 54px !important;
   max-width: calc(100% - 18px) !important;
@@ -166,8 +172,9 @@
   .layout.mds-sidebar-collapsed .sidebar .logo-container::before {
     width: 48px !important;
     height: 48px !important;
-    background-image: url('/favicon-negativa.png') !important;
-    background-position: center !important;
+    background: transparent url('/favicon-negativa.png') center / contain no-repeat !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
   }
 
   .layout.mds-sidebar-collapsed .sidebar .sidebar-org-name,
@@ -218,8 +225,16 @@
   }
 
   .mobile-header .mobile-brand::before {
-    background-image: url('/logo-mds-food-negativa.png') !important;
-    background-size: contain !important;
+    background: #FFFFFF !important;
+    background-image: none !important;
+    -webkit-mask-image: url('/logo-mds-food-header.png');
+    mask-image: url('/logo-mds-food-header.png');
+    -webkit-mask-position: left center;
+    mask-position: left center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
   }
 
   .mobile-header .header-org-name,
