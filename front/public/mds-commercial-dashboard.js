@@ -1,8 +1,15 @@
 (() => {
   const CARD_ATTR = 'data-mds-commercial-dashboard-card';
   const COMPANY_NAV_ATTR = 'data-mds-company-nav-link';
+  const CASHIER_NAV_ATTR = 'data-mds-cashier-nav-link';
 
   const commercialCards = [
+    {
+      href: '/caixa',
+      label: 'Caixa / PDV',
+      description: 'Registre vendas rápidas em dinheiro ou cartão pendente',
+      icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h4M15 13h2"/>'
+    },
     {
       href: '/minha-empresa',
       label: 'Minha empresa',
@@ -34,7 +41,8 @@
     const style = document.createElement('style');
     style.id = 'mds-commercial-dashboard-styles';
     style.textContent = `
-      #staff-sidebar-nav .mds-company-nav-link {
+      #staff-sidebar-nav .mds-company-nav-link,
+      #staff-sidebar-nav .mds-cashier-nav-link {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -45,7 +53,8 @@
         text-decoration: none;
         border-left: 3px solid transparent;
       }
-      #staff-sidebar-nav .mds-company-nav-link:hover {
+      #staff-sidebar-nav .mds-company-nav-link:hover,
+      #staff-sidebar-nav .mds-cashier-nav-link:hover {
         background: rgba(55, 75, 137, .08);
         border-left-color: #D6A92F;
         color: #2F3453;
@@ -58,6 +67,7 @@
         background: rgba(55, 75, 137, .10);
         color: #374B89;
       }
+      .quick-actions .mds-commercial-dashboard-card[href="/caixa"] { order: 80; }
       .quick-actions .mds-commercial-dashboard-card[href="/minha-empresa"] { order: 170; }
       .quick-actions .mds-commercial-dashboard-card[href="/fidelidade"] { order: 180; }
       .quick-actions .mds-commercial-dashboard-card[href="/promocoes"] { order: 190; }
@@ -66,22 +76,43 @@
     document.head.appendChild(style);
   };
 
-  const ensureCompanyNav = (adminMarker) => {
-    const nav = document.querySelector('#staff-sidebar-nav');
-    if (!nav || nav.querySelector(`[${COMPANY_NAV_ATTR}]`)) return;
-
-    const companyLink = document.createElement('a');
-    companyLink.className = 'nav-link mds-company-nav-link';
-    companyLink.href = '/minha-empresa';
-    companyLink.setAttribute(COMPANY_NAV_ATTR, 'true');
-    companyLink.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2M13 10h2M9 14h2M13 14h2"/>
-      </svg>
-      <span>Minha empresa</span>
+  const createNavLink = ({ className, href, attr, label, icon }) => {
+    const link = document.createElement('a');
+    link.className = `nav-link ${className}`;
+    link.href = href;
+    link.setAttribute(attr, 'true');
+    link.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${icon}</svg>
+      <span>${label}</span>
     `;
+    return link;
+  };
 
-    nav.insertBefore(companyLink, adminMarker);
+  const ensureExtraNav = (adminMarker) => {
+    const nav = document.querySelector('#staff-sidebar-nav');
+    if (!nav) return;
+
+    if (!nav.querySelector(`[${CASHIER_NAV_ATTR}]`)) {
+      const cashierLink = createNavLink({
+        className: 'mds-cashier-nav-link',
+        href: '/caixa',
+        attr: CASHIER_NAV_ATTR,
+        label: 'Caixa / PDV',
+        icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h4M15 13h2"/>'
+      });
+      nav.insertBefore(cashierLink, adminMarker);
+    }
+
+    if (!nav.querySelector(`[${COMPANY_NAV_ATTR}]`)) {
+      const companyLink = createNavLink({
+        className: 'mds-company-nav-link',
+        href: '/minha-empresa',
+        attr: COMPANY_NAV_ATTR,
+        label: 'Minha empresa',
+        icon: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2M13 10h2M9 14h2M13 14h2"/>'
+      });
+      nav.insertBefore(companyLink, adminMarker);
+    }
   };
 
   const ensureCommercialUi = () => {
@@ -89,7 +120,7 @@
     if (!adminMarker) return;
 
     ensureStyles();
-    ensureCompanyNav(adminMarker);
+    ensureExtraNav(adminMarker);
 
     const actions = document.querySelector('.quick-actions');
     if (!actions) return;
