@@ -26,12 +26,13 @@
         <div>
           <p class="mds-catalog-shell-eyebrow">Catálogo de venda</p>
           <h2 class="mds-catalog-shell-title">Organize o que seu cliente vê e compra</h2>
-          <p class="mds-catalog-shell-copy">Gerencie produtos, categorias, complementos, destaques, etiquetas e promoções usando recursos reais do MDS Food.</p>
+          <p class="mds-catalog-shell-copy">Gerencie produtos, categorias, complementos, combos, destaques, etiquetas e promoções usando recursos reais do MDS Food.</p>
         </div>
         <nav class="mds-catalog-nav" aria-label="Áreas do cardápio">
           <button type="button" data-mds-catalog-products class="is-active">Produtos</button>
           <a href="/cardapio/categorias">Categorias</a>
           <a href="/cardapio/complementos">Complementos e opções</a>
+          <a href="/cardapio/combos">Combos</a>
           <a href="/cardapio/destaques">Destaques e etiquetas</a>
           <a href="/promocoes">Promoções</a>
         </nav>
