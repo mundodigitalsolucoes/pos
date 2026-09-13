@@ -92,6 +92,12 @@
       .quick-actions .mds-commercial-dashboard-card[href="/fidelidade"] { order: 180; }
       .quick-actions .mds-commercial-dashboard-card[href="/promocoes"] { order: 190; }
       .quick-actions .mds-commercial-dashboard-card[href="/integracoes"] { order: 200; }
+      .mds-operational-kpi[data-kpi="new-orders"] .mds-operational-kpi-value {
+        color: #374B89;
+      }
+      .mds-operational-kpi[data-kpi="unavailable-products"] .mds-operational-kpi-value {
+        color: #C19620;
+      }
     `;
     document.head.appendChild(style);
   };
@@ -181,10 +187,76 @@
     window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
   };
 
+  const apiUrl = (path) => {
+    const base = String(window.__API_URL__ || '/api').replace(/\/$/, '');
+    return `${base}${path}`;
+  };
+
+  const setKpiValue = (summary, key, value) => {
+    const el = summary.querySelector(`[data-kpi-value="${key}"]`);
+    if (el) el.textContent = value;
+  };
+
+  const ensureAdditionalOperationalKpis = () => {
+    const summary = document.querySelector('[data-mds-operational-summary]');
+    if (!summary || summary.dataset.mdsExtraKpis === 'true') return;
+    const grid = summary.querySelector('.mds-operational-summary-grid');
+    if (!grid) return;
+
+    summary.dataset.mdsExtraKpis = 'true';
+
+    const newOrders = document.createElement('a');
+    newOrders.className = 'mds-operational-kpi';
+    newOrders.dataset.kpi = 'new-orders';
+    newOrders.href = '/staff/orders';
+    newOrders.innerHTML = `
+      <span class="mds-operational-kpi-label">Pedidos novos</span>
+      <strong class="mds-operational-kpi-value" data-kpi-value="new-orders">…</strong>
+    `;
+    grid.prepend(newOrders);
+
+    const products = document.createElement('a');
+    products.className = 'mds-operational-kpi';
+    products.dataset.kpi = 'unavailable-products';
+    products.href = '/products';
+    products.innerHTML = `
+      <span class="mds-operational-kpi-label">Produtos indisponíveis</span>
+      <strong class="mds-operational-kpi-value" data-kpi-value="unavailable-products">…</strong>
+    `;
+    grid.appendChild(products);
+
+    fetch(apiUrl('/orders?include_removed=false'), { credentials: 'include' })
+      .then((response) => {
+        if (!response.ok) throw new Error('orders');
+        return response.json();
+      })
+      .then((orders) => {
+        const count = Array.isArray(orders)
+          ? orders.filter((order) => order && order.status === 'pending').length
+          : 0;
+        setKpiValue(summary, 'new-orders', String(count));
+      })
+      .catch(() => setKpiValue(summary, 'new-orders', '—'));
+
+    fetch(apiUrl('/tenant-products?active_only=false'), { credentials: 'include' })
+      .then((response) => {
+        if (!response.ok) throw new Error('products');
+        return response.json();
+      })
+      .then((items) => {
+        const count = Array.isArray(items)
+          ? items.filter((item) => item && item.is_active === false).length
+          : 0;
+        setKpiValue(summary, 'unavailable-products', String(count));
+      })
+      .catch(() => setKpiValue(summary, 'unavailable-products', '—'));
+  };
+
   const ensureCommercialUi = () => {
     ensureStyles();
     ensureOrderOperationalNav();
     applyOrdersViewFromQuery();
+    ensureAdditionalOperationalKpis();
 
     const adminMarker = document.querySelector('#staff-sidebar-nav [data-mds-commercial-links]');
     if (adminMarker) {
