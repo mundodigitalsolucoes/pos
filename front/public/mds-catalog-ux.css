@@ -1,0 +1,99 @@
+/* MDS Food — camada comercial do Cardápio/Catálogo 2.0. */
+.mds-catalog-shell {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(47, 52, 83, .12);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(47, 52, 83, .05);
+}
+
+.mds-catalog-shell-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.mds-catalog-shell-eyebrow {
+  margin: 0 0 .25rem;
+  color: #D6A92F;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.mds-catalog-shell-title {
+  margin: 0;
+  color: #2F3453;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.mds-catalog-shell-copy {
+  margin: .3rem 0 0;
+  color: #667085;
+  font-size: .88rem;
+}
+
+.mds-catalog-nav {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.mds-catalog-nav button,
+.mds-catalog-nav a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .55rem .8rem;
+  border: 1px solid rgba(55, 75, 137, .22);
+  border-radius: 9px;
+  background: #F7F5EF;
+  color: #374B89;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mds-catalog-nav button:hover,
+.mds-catalog-nav a:hover {
+  border-color: #D6A92F;
+  background: rgba(214, 169, 47, .08);
+  color: #2F3453;
+}
+
+.mds-catalog-nav .is-active {
+  border-color: #374B89;
+  background: #374B89;
+  color: #fff;
+}
+
+/* Aproxima a listagem atual do estilo de catálogo comercial sem alterar a lógica Angular. */
+body.mds-products-page .page-header h1 {
+  color: #2F3453;
+}
+
+body.mds-products-page .products-table,
+body.mds-products-page .table-container,
+body.mds-products-page .form-card {
+  border-radius: 14px !important;
+}
+
+body.mds-products-page .main-tabs-container {
+  margin-bottom: .85rem;
+}
+
+@media (max-width: 720px) {
+  .mds-catalog-shell { padding: .9rem; border-radius: 12px; }
+  .mds-catalog-nav { width: 100%; }
+  .mds-catalog-nav button,
+  .mds-catalog-nav a { flex: 1 1 calc(50% - .5rem); }
+}
