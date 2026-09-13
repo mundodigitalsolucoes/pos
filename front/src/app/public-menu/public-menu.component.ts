@@ -8,6 +8,7 @@ import {
   afterNextRender,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl, SafeStyle, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -23,6 +24,12 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LanguageService } from '../services/language.service';
 import { LegalLinksComponent } from '../shared/legal-links.component';
 
+interface PublicCatalogMerchandising {
+  product_id: number;
+  is_featured: boolean;
+  labels: string[];
+}
+
 @Component({
   selector: 'app-public-menu',
   standalone: true,
@@ -33,6 +40,7 @@ import { LegalLinksComponent } from '../shared/legal-links.component';
 export class PublicMenuComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  private http = inject(HttpClient);
   private translate = inject(TranslateService);
   private language = inject(LanguageService);
   private sanitizer = inject(DomSanitizer);
@@ -46,6 +54,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   loading = signal(true);
   menuLoading = signal(false);
   errorKind = signal<'invalid_tenant' | 'tenant_not_found' | 'menu_load_failed' | null>(null);
+  merchandising = signal<Record<number, PublicCatalogMerchandising>>({});
   /** Category ids collapsed by user toggle (default: all expanded). */
   private collapsedCategoryIds = signal<Set<string>>(new Set());
 
@@ -82,6 +91,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     }
     this.tenantId.set(tid);
     this.updateDocumentTitle();
+    this.loadMerchandising(tid);
 
     this.api.getPublicTenant(tid).subscribe({
       next: (t) => {
@@ -117,6 +127,25 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
         this.updateDocumentTitle();
       },
     });
+  }
+
+  private loadMerchandising(tenantId: number): void {
+    const base = environment.apiUrl.replace(/\/$/, '');
+    this.http
+      .get<PublicCatalogMerchandising[]>(`${base}/tenant/subcategories/public/catalog-merchandising/${tenantId}`)
+      .subscribe({
+        next: (rows) => {
+          const mapped: Record<number, PublicCatalogMerchandising> = {};
+          for (const row of rows) {
+            mapped[row.product_id] = {
+              ...row,
+              labels: Array.isArray(row.labels) ? row.labels : [],
+            };
+          }
+          this.merchandising.set(mapped);
+        },
+        error: () => this.merchandising.set({}),
+      });
   }
 
   private reloadMenu(): void {
@@ -214,6 +243,14 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     const code = this.currencyLabel();
     if (!code) return amount;
     return `${amount} ${code}`;
+  }
+
+  isFeatured(productId: number): boolean {
+    return this.merchandising()[productId]?.is_featured === true;
+  }
+
+  productLabels(productId: number): string[] {
+    return this.merchandising()[productId]?.labels ?? [];
   }
 
   private updateDocumentTitle(): void {
