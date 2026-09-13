@@ -5,9 +5,9 @@ from app.tenant_currency import (
 )
 
 
-def test_normalize_defaults_to_eur():
-    assert normalize_tenant_currency_fields(None, None) == ("EUR", "€")
-    assert normalize_tenant_currency_fields("", "$") == ("EUR", "€")
+def test_normalize_defaults_to_brl():
+    assert normalize_tenant_currency_fields(None, None) == ("BRL", "R$")
+    assert normalize_tenant_currency_fields("", "$") == ("BRL", "R$")
 
 
 def test_normalize_usd():
@@ -17,8 +17,8 @@ def test_normalize_usd():
 def test_apply_dict_mutates():
     d = {"currency_code": None, "currency": "$"}
     apply_tenant_currency_api_dict(d)
-    assert d["currency_code"] == "EUR"
-    assert d["currency"] == "€"
+    assert d["currency_code"] == "BRL"
+    assert d["currency"] == "R$"
 
 
 def test_apply_dict_keeps_usd():
@@ -30,4 +30,5 @@ def test_apply_dict_keeps_usd():
 
 def test_sync_symbol():
     assert sync_tenant_currency_symbol_from_code("EUR") == "€"
+    assert sync_tenant_currency_symbol_from_code("BRL") == "R$"
     assert sync_tenant_currency_symbol_from_code(None) is None
