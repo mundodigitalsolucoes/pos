@@ -100,6 +100,7 @@ export const routes: Routes = [
 
   // Products - all roles can view, but editing is handled in component
   { path: 'products', canActivate: [authGuard], loadComponent: () => import('./products/products.component').then(m => m.ProductsComponent) },
+  { path: 'cardapio/categorias', canActivate: [authGuard, adminGuard], loadComponent: () => import('./catalog-management/catalog-categories.component').then(m => m.CatalogCategoriesComponent) },
   { path: 'catalog', canActivate: [authGuard, uiModuleGuard('providers')], loadComponent: () => import('./catalog/catalog.component').then(m => m.CatalogComponent) },
 
   // MDS Food operational access to the tenant's existing public sales channels.
