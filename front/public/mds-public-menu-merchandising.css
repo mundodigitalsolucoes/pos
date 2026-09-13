@@ -28,6 +28,40 @@
   color: #7B5A00;
 }
 
+.mds-combo-composition {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid #D6A92F;
+  border-radius: 0 10px 10px 0;
+  background: rgba(214, 169, 47, .08);
+}
+
+.mds-combo-composition > strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #2F3453;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mds-combo-composition-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mds-combo-composition-items span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #374B89;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .mds-product-modifiers {
   margin-top: 12px;
   padding: 12px;
@@ -120,5 +154,14 @@
   .mds-product-modifier-option {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .mds-combo-composition-items {
+    flex-direction: column;
+  }
+
+  .mds-combo-composition-items span {
+    width: 100%;
+    border-radius: 8px;
   }
 }
