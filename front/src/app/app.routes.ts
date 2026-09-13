@@ -103,6 +103,7 @@ export const routes: Routes = [
   { path: 'cardapio/categorias', canActivate: [authGuard, adminGuard], loadComponent: () => import('./catalog-management/catalog-categories.component').then(m => m.CatalogCategoriesComponent) },
   { path: 'cardapio/destaques', canActivate: [authGuard, adminGuard], loadComponent: () => import('./catalog-merchandising/catalog-merchandising.component').then(m => m.CatalogMerchandisingComponent) },
   { path: 'cardapio/complementos', canActivate: [authGuard, adminGuard], loadComponent: () => import('./catalog-management/catalog-modifiers.component').then(m => m.CatalogModifiersComponent) },
+  { path: 'cardapio/combos', canActivate: [authGuard, adminGuard], loadComponent: () => import('./catalog-management/catalog-combos.component').then(m => m.CatalogCombosComponent) },
   { path: 'catalog', canActivate: [authGuard, uiModuleGuard('providers')], loadComponent: () => import('./catalog/catalog.component').then(m => m.CatalogComponent) },
 
   // MDS Food operational access to the tenant's existing public sales channels.
