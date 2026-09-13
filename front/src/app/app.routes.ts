@@ -69,18 +69,15 @@ export const routes: Routes = [
   { path: 'public-menu/:tenantId', loadComponent: () => import('./public-menu/public-menu.component').then(m => m.PublicMenuComponent) },
   {
     path: 'delivery/:tenantId/payment-success',
-    loadComponent: () =>
-      import('./delivery/delivery-payment-success.component').then((m) => m.DeliveryPaymentSuccessComponent),
+    loadComponent: () => import('./delivery/delivery-payment-success.component').then((m) => m.DeliveryPaymentSuccessComponent),
   },
   {
     path: 'delivery/:tenantId/track',
-    loadComponent: () =>
-      import('./delivery/delivery-track.component').then((m) => m.DeliveryTrackComponent),
+    loadComponent: () => import('./delivery/delivery-track.component').then((m) => m.DeliveryTrackComponent),
   },
   {
     path: 'delivery/:tenantId',
-    loadComponent: () =>
-      import('./delivery/delivery-checkout.component').then((m) => m.DeliveryCheckoutComponent),
+    loadComponent: () => import('./delivery/delivery-checkout.component').then((m) => m.DeliveryCheckoutComponent),
   },
   { path: 'book/:tenantId', loadComponent: () => import('./book/book.component').then(m => m.BookComponent) },
   { path: 'waitlist/:tenantId', loadComponent: () => import('./waitlist-public/waitlist-public.component').then(m => m.WaitlistPublicComponent) },
@@ -96,6 +93,7 @@ export const routes: Routes = [
 
   // Protected routes - accessible by all authenticated users
   { path: 'dashboard', canActivate: [authGuard], loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
+  { path: 'gestao-pedidos', canActivate: [authGuard, orderAccessGuard], loadComponent: () => import('./order-management/order-management.component').then(m => m.OrderManagementComponent) },
   { path: 'my-shift', canActivate: [authGuard], loadComponent: () => import('./my-shift/my-shift.component').then(m => m.MyShiftComponent) },
   // Talk to POS (#344): staff voice/text navigation shortcuts (no mutations)
   { path: 'talk', canActivate: [authGuard], loadComponent: () => import('./talk/talk.component').then(m => m.TalkComponent) },
@@ -123,7 +121,7 @@ export const routes: Routes = [
   },
   { path: 'tables', canActivate: [authGuard, uiModuleGuard('tables'), tableAccessGuard], loadComponent: () => import('./tables/tables.component').then(m => m.TablesComponent) },
 
-  // Staff orders (list and manage orders)
+  // Staff orders (detailed list and advanced operations)
   { path: 'staff/orders', canActivate: [authGuard, orderAccessGuard], loadComponent: () => import('./orders/orders.component').then(m => m.OrdersComponent) },
   // Billing customers (Factura)
   { path: 'customers', canActivate: [authGuard, orderAccessGuard], loadComponent: () => import('./customers/customers.component').then(m => m.CustomersComponent) },
