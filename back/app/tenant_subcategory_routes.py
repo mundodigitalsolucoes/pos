@@ -18,9 +18,11 @@ from .tenant_subcategories import (
     rename_custom_subcategory,
 )
 from .catalog_modifier_routes import router as catalog_modifier_router
+from .catalog_modifier_checkout_routes import router as catalog_modifier_checkout_router
 
 router = APIRouter()
 router.include_router(catalog_modifier_router)
+router.include_router(catalog_modifier_checkout_router)
 
 
 class SubcategoryCreateBody(SQLModel):
