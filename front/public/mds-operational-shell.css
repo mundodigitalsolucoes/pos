@@ -104,6 +104,37 @@
 .nav > a.nav-link[href="/my-shift"] { order: 70; }
 .nav > a.nav-link[href="/talk"] { order: 80; }
 
+/* Commercial language for the operational navigation. Keep the real links and guards untouched. */
+.nav > .nav-section:has(a[href="/tables"]) > .nav-section-header > span,
+.nav > .nav-section:has(a[href="/working-plan"]) > .nav-section-header > span,
+.nav > .nav-section:has(a[href="/products"]) > .nav-section-header > span,
+.nav > .nav-section:has(a[href="/settings"]) > .nav-section-header > span {
+  font-size: 0 !important;
+}
+
+.nav > .nav-section:has(a[href="/tables"]) > .nav-section-header > span::after,
+.nav > .nav-section:has(a[href="/working-plan"]) > .nav-section-header > span::after,
+.nav > .nav-section:has(a[href="/products"]) > .nav-section-header > span::after,
+.nav > .nav-section:has(a[href="/settings"]) > .nav-section-header > span::after {
+  font-size: 0.95rem !important;
+}
+
+.nav > .nav-section:has(a[href="/tables"]) > .nav-section-header > span::after {
+  content: 'Operação';
+}
+
+.nav > .nav-section:has(a[href="/working-plan"]) > .nav-section-header > span::after {
+  content: 'Agenda e reservas';
+}
+
+.nav > .nav-section:has(a[href="/products"]) > .nav-section-header > span::after {
+  content: 'Cardápio e estoque';
+}
+
+.nav > .nav-section:has(a[href="/settings"]) > .nav-section-header > span::after {
+  content: 'Gestão';
+}
+
 /* Secondary staff tools should not compete visually with the core sales/operation flow. */
 .nav > a.nav-link[href="/my-shift"],
 .nav > a.nav-link[href="/talk"] {
