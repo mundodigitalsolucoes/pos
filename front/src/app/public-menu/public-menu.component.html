@@ -96,7 +96,7 @@
                 [attr.aria-labelledby]="'cat-' + cat.id"
               >
                 @for (product of cat.products; track product.id) {
-                  <li class="public-menu-product">
+                  <li class="public-menu-product" [class.mds-featured-product]="isFeatured(product.id)">
                     @if (product.image_url) {
                       <img
                         class="public-menu-product-image"
@@ -111,6 +111,16 @@
                         <span class="public-menu-product-name">{{ product.name }}</span>
                         <span class="public-menu-product-price">{{ formatPrice(product) }}</span>
                       </div>
+                      @if (isFeatured(product.id) || productLabels(product.id).length > 0) {
+                        <div class="mds-product-badges" aria-label="Informações do produto">
+                          @if (isFeatured(product.id)) {
+                            <span class="mds-product-badge mds-product-badge-featured">★ Destaque</span>
+                          }
+                          @for (label of productLabels(product.id); track label) {
+                            <span class="mds-product-badge">{{ label }}</span>
+                          }
+                        </div>
+                      }
                       @if (product.description?.trim()) {
                         <p class="public-menu-product-desc">{{ product.description }}</p>
                       }
