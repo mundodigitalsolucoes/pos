@@ -71,6 +71,39 @@ def _canonical_product_id(session: Session, tenant_id: int, public_product_id: i
     return public_product_id
 
 
+def _combo_snapshot(session: Session, tenant_id: int, product_id: int) -> list[dict]:
+    """Return the current active combo composition for a product, ready to persist on the order item."""
+    rows = session.execute(
+        text(
+            """
+            SELECT i.component_product_id AS product_id,
+                   i.quantity,
+                   p.name
+            FROM catalog_combo c
+            JOIN catalog_combo_item i
+              ON i.combo_id = c.id
+             AND i.tenant_id = c.tenant_id
+            JOIN product p
+              ON p.id = i.component_product_id
+             AND p.tenant_id = i.tenant_id
+            WHERE c.tenant_id = :tenant_id
+              AND c.product_id = :product_id
+              AND c.is_active = TRUE
+            ORDER BY i.sort_order, i.id
+            """
+        ),
+        {"tenant_id": tenant_id, "product_id": product_id},
+    ).mappings().all()
+    return [
+        {
+            "product_id": int(row["product_id"]),
+            "quantity": int(row["quantity"]),
+            "name": row["name"],
+        }
+        for row in rows
+    ]
+
+
 def _apply_modifier_snapshots(
     session: Session,
     *,
@@ -97,12 +130,30 @@ def _apply_modifier_snapshots(
                 total_incl = int(order_item.price_cents) * int(order_item.quantity)
                 order_item.tax_amount_cents = round(total_incl * rate / (100 + rate))
 
+        combo = _combo_snapshot(
+            session,
+            order.tenant_id,
+            int(prepared["canonical_product_id"]),
+        )
+        answers: dict = {}
+        summary_parts: list[str] = []
+
+        if combo:
+            answers["catalog_combo"] = combo
+            summary_parts.append(
+                "Combo: " + ", ".join(f'{item["quantity"]}× {item["name"]}' for item in combo)
+            )
+
         if modifier["groups"]:
-            order_item.customization_answers = {
-                "catalog_modifier_option_ids": prepared["selected_option_ids"],
-                "catalog_modifiers": modifier["groups"],
-            }
-            order_item.customization_summary = modifier["summary"]
+            answers["catalog_modifier_option_ids"] = prepared["selected_option_ids"]
+            answers["catalog_modifiers"] = modifier["groups"]
+            if modifier["summary"]:
+                summary_parts.append(str(modifier["summary"]))
+
+        if answers:
+            order_item.customization_answers = answers
+        if summary_parts:
+            order_item.customization_summary = " · ".join(summary_parts)
         session.add(order_item)
 
     session.commit()
