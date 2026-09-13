@@ -1,0 +1,90 @@
+/* MDS Food — Painel Operacional 2.0 shell overrides.
+ * Keep this file intentionally small: visual white-label only, no route or permission changes.
+ */
+
+/* Sidebar brand: use the commercial MDS Food lockup, while keeping the tenant name below it. */
+.sidebar .logo-container::before {
+  content: '' !important;
+  display: block !important;
+  width: 154px !important;
+  height: 46px !important;
+  background: url('/logo-mds-food-header.png') left center / contain no-repeat !important;
+}
+
+.sidebar .logo-container > .logo,
+.sidebar .logo-container > .version,
+.sidebar .commit-hash,
+.sidebar .tenant-id {
+  display: none !important;
+}
+
+.sidebar .sidebar-org-name {
+  max-width: 172px !important;
+  margin-top: 0.35rem !important;
+  color: #2F3453 !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+/* Mobile header: commercial brand instead of the generic POS label. */
+.mobile-header .mobile-brand {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+}
+
+.mobile-header .mobile-brand::before {
+  content: '' !important;
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: 104px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  background: url('/logo-mds-food-header.png') left center / contain no-repeat !important;
+}
+
+.mobile-header .header-title {
+  display: none !important;
+}
+
+.mobile-header .header-org-name {
+  max-width: min(48vw, 190px) !important;
+  color: #2F3453 !important;
+  font-weight: 600 !important;
+}
+
+/* Make the operational shell feel like one product, not a legacy admin skin. */
+.sidebar {
+  border-right-color: rgba(47, 52, 83, 0.10) !important;
+}
+
+.sidebar-header {
+  min-height: 88px !important;
+  background: #F7F5EF !important;
+}
+
+.nav-link.active,
+.nav-sublink.active {
+  color: #374B89 !important;
+}
+
+.nav-link.active {
+  border-left-color: #D6A92F !important;
+  background: rgba(55, 75, 137, 0.08) !important;
+}
+
+.nav-link:focus-visible,
+.nav-section-header:focus-visible,
+.nav-sublink:focus-visible,
+.logout-btn:focus-visible,
+.menu-toggle:focus-visible {
+  outline: 3px solid rgba(214, 169, 47, 0.42) !important;
+  outline-offset: 2px !important;
+}
+
+@media (max-width: 599px) {
+  .sidebar .logo-container::before {
+    width: 140px !important;
+    height: 42px !important;
+  }
+}
