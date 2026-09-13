@@ -124,6 +124,16 @@
                       @if (product.description?.trim()) {
                         <p class="public-menu-product-desc">{{ product.description }}</p>
                       }
+                      @if (comboItems(product.id).length > 0) {
+                        <div class="mds-combo-composition">
+                          <strong>Este combo inclui</strong>
+                          <div class="mds-combo-composition-items">
+                            @for (item of comboItems(product.id); track item.product_id) {
+                              <span>{{ item.quantity }}× {{ item.name }}</span>
+                            }
+                          </div>
+                        </div>
+                      }
                       @if (modifierGroups(product).length > 0) {
                         <div class="mds-product-modifiers">
                           <div class="mds-product-modifiers-title">Personalize este item</div>
