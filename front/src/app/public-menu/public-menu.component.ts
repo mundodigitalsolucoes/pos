@@ -45,6 +45,17 @@ interface PublicModifierGroup {
   options: PublicModifierOption[];
 }
 
+interface PublicComboItem {
+  product_id: number;
+  quantity: number;
+  name: string;
+}
+
+interface PublicComboComposition {
+  product_id: number;
+  items: PublicComboItem[];
+}
+
 @Component({
   selector: 'app-public-menu',
   standalone: true,
@@ -70,6 +81,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   menuLoading = signal(false);
   errorKind = signal<'invalid_tenant' | 'tenant_not_found' | 'menu_load_failed' | null>(null);
   merchandising = signal<Record<number, PublicCatalogMerchandising>>({});
+  comboCompositions = signal<Record<number, PublicComboItem[]>>({});
   /** Category ids collapsed by user toggle (default: all expanded). */
   private collapsedCategoryIds = signal<Set<string>>(new Set());
 
@@ -107,6 +119,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     this.tenantId.set(tid);
     this.updateDocumentTitle();
     this.loadMerchandising(tid);
+    this.loadComboCompositions(tid);
 
     this.api.getPublicTenant(tid).subscribe({
       next: (t) => {
@@ -160,6 +173,22 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
           this.merchandising.set(mapped);
         },
         error: () => this.merchandising.set({}),
+      });
+  }
+
+  private loadComboCompositions(tenantId: number): void {
+    const base = environment.apiUrl.replace(/\/$/, '');
+    this.http
+      .get<PublicComboComposition[]>(`${base}/tenant/subcategories/public/combo-compositions/${tenantId}`)
+      .subscribe({
+        next: (rows) => {
+          const mapped: Record<number, PublicComboItem[]> = {};
+          for (const row of rows) {
+            mapped[row.product_id] = Array.isArray(row.items) ? row.items : [];
+          }
+          this.comboCompositions.set(mapped);
+        },
+        error: () => this.comboCompositions.set({}),
       });
   }
 
@@ -287,6 +316,10 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     } catch {
       return `+ R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
     }
+  }
+
+  comboItems(productId: number): PublicComboItem[] {
+    return this.comboCompositions()[productId] ?? [];
   }
 
   isFeatured(productId: number): boolean {
