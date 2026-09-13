@@ -2,6 +2,8 @@
   const CARD_ATTR = 'data-mds-commercial-dashboard-card';
   const COMPANY_NAV_ATTR = 'data-mds-company-nav-link';
   const CASHIER_NAV_ATTR = 'data-mds-cashier-nav-link';
+  const DELIVERY_NAV_ATTR = 'data-mds-delivery-nav-link';
+  const HISTORY_NAV_ATTR = 'data-mds-order-history-nav-link';
 
   const commercialCards = [
     {
@@ -9,6 +11,18 @@
       label: 'Caixa / PDV',
       description: 'Registre vendas rápidas em dinheiro ou cartão pendente',
       icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h4M15 13h2"/>'
+    },
+    {
+      href: '/staff/orders?view=delivery',
+      label: 'Delivery',
+      description: 'Acompanhe e gerencie os pedidos de entrega em um só lugar',
+      icon: '<path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>'
+    },
+    {
+      href: '/staff/orders?view=history',
+      label: 'Histórico de pedidos',
+      description: 'Consulte pedidos concluídos, pagos e cancelados',
+      icon: '<path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>'
     },
     {
       href: '/minha-empresa',
@@ -42,7 +56,9 @@
     style.id = 'mds-commercial-dashboard-styles';
     style.textContent = `
       #staff-sidebar-nav .mds-company-nav-link,
-      #staff-sidebar-nav .mds-cashier-nav-link {
+      #staff-sidebar-nav .mds-cashier-nav-link,
+      #staff-sidebar-nav .mds-delivery-nav-link,
+      #staff-sidebar-nav .mds-order-history-nav-link {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -54,7 +70,9 @@
         border-left: 3px solid transparent;
       }
       #staff-sidebar-nav .mds-company-nav-link:hover,
-      #staff-sidebar-nav .mds-cashier-nav-link:hover {
+      #staff-sidebar-nav .mds-cashier-nav-link:hover,
+      #staff-sidebar-nav .mds-delivery-nav-link:hover,
+      #staff-sidebar-nav .mds-order-history-nav-link:hover {
         background: rgba(55, 75, 137, .08);
         border-left-color: #D6A92F;
         color: #2F3453;
@@ -68,6 +86,8 @@
         color: #374B89;
       }
       .quick-actions .mds-commercial-dashboard-card[href="/caixa"] { order: 80; }
+      .quick-actions .mds-commercial-dashboard-card[href="/staff/orders?view=delivery"] { order: 90; }
+      .quick-actions .mds-commercial-dashboard-card[href="/staff/orders?view=history"] { order: 160; }
       .quick-actions .mds-commercial-dashboard-card[href="/minha-empresa"] { order: 170; }
       .quick-actions .mds-commercial-dashboard-card[href="/fidelidade"] { order: 180; }
       .quick-actions .mds-commercial-dashboard-card[href="/promocoes"] { order: 190; }
@@ -88,7 +108,37 @@
     return link;
   };
 
-  const ensureExtraNav = (adminMarker) => {
+  const ensureOrderOperationalNav = () => {
+    const nav = document.querySelector('#staff-sidebar-nav');
+    if (!nav) return;
+    const ordersLink = nav.querySelector('a[href="/staff/orders"]');
+    if (!ordersLink) return;
+
+    if (!nav.querySelector(`[${DELIVERY_NAV_ATTR}]`)) {
+      const deliveryLink = createNavLink({
+        className: 'mds-delivery-nav-link',
+        href: '/staff/orders?view=delivery',
+        attr: DELIVERY_NAV_ATTR,
+        label: 'Delivery',
+        icon: '<path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>'
+      });
+      ordersLink.insertAdjacentElement('afterend', deliveryLink);
+    }
+
+    if (!nav.querySelector(`[${HISTORY_NAV_ATTR}]`)) {
+      const historyLink = createNavLink({
+        className: 'mds-order-history-nav-link',
+        href: '/staff/orders?view=history',
+        attr: HISTORY_NAV_ATTR,
+        label: 'Histórico de pedidos',
+        icon: '<path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>'
+      });
+      const deliveryLink = nav.querySelector(`[${DELIVERY_NAV_ATTR}]`);
+      (deliveryLink || ordersLink).insertAdjacentElement('afterend', historyLink);
+    }
+  };
+
+  const ensureAdminExtraNav = (adminMarker) => {
     const nav = document.querySelector('#staff-sidebar-nav');
     if (!nav) return;
 
@@ -115,17 +165,40 @@
     }
   };
 
-  const ensureCommercialUi = () => {
-    const adminMarker = document.querySelector('#staff-sidebar-nav [data-mds-commercial-links]');
-    if (!adminMarker) return;
+  const applyOrdersViewFromQuery = () => {
+    if (window.location.pathname !== '/staff/orders') return;
+    const view = new URLSearchParams(window.location.search).get('view');
+    if (view !== 'history' && view !== 'delivery') return;
 
+    const tabs = document.querySelectorAll('.filter-tabs .filter-tab');
+    const index = view === 'history' ? 2 : 3;
+    const tab = tabs.item(index);
+    if (!(tab instanceof HTMLButtonElement)) return;
+
+    tab.click();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('view');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  };
+
+  const ensureCommercialUi = () => {
     ensureStyles();
-    ensureExtraNav(adminMarker);
+    ensureOrderOperationalNav();
+    applyOrdersViewFromQuery();
+
+    const adminMarker = document.querySelector('#staff-sidebar-nav [data-mds-commercial-links]');
+    if (adminMarker) {
+      ensureAdminExtraNav(adminMarker);
+    }
 
     const actions = document.querySelector('.quick-actions');
     if (!actions) return;
 
+    const hasOrdersAccess = !!document.querySelector('#staff-sidebar-nav a[href="/staff/orders"]');
     for (const item of commercialCards) {
+      const isOrderArea = item.href.startsWith('/staff/orders?view=');
+      if (isOrderArea && !hasOrdersAccess) continue;
+      if (!isOrderArea && !adminMarker) continue;
       if (actions.querySelector(`[${CARD_ATTR}="${item.href}"]`)) continue;
 
       const card = document.createElement('a');
