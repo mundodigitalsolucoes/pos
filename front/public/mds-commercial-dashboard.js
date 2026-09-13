@@ -1,7 +1,14 @@
 (() => {
   const CARD_ATTR = 'data-mds-commercial-dashboard-card';
+  const COMPANY_NAV_ATTR = 'data-mds-company-nav-link';
 
   const commercialCards = [
+    {
+      href: '/minha-empresa',
+      label: 'Minha empresa',
+      description: 'Confira os dados do estabelecimento usados na operação e nos canais públicos',
+      icon: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2M13 10h2M9 14h2M13 14h2"/>'
+    },
     {
       href: '/fidelidade',
       label: 'Fidelidade',
@@ -27,6 +34,22 @@
     const style = document.createElement('style');
     style.id = 'mds-commercial-dashboard-styles';
     style.textContent = `
+      #staff-sidebar-nav .mds-company-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 42px;
+        padding: 10px 20px;
+        color: #374B89;
+        font-weight: 600;
+        text-decoration: none;
+        border-left: 3px solid transparent;
+      }
+      #staff-sidebar-nav .mds-company-nav-link:hover {
+        background: rgba(55, 75, 137, .08);
+        border-left-color: #D6A92F;
+        color: #2F3453;
+      }
       .quick-actions .mds-commercial-dashboard-card {
         border-top: 3px solid #374B89;
         box-shadow: 0 8px 20px rgba(47, 52, 83, .06);
@@ -35,6 +58,7 @@
         background: rgba(55, 75, 137, .10);
         color: #374B89;
       }
+      .quick-actions .mds-commercial-dashboard-card[href="/minha-empresa"] { order: 170; }
       .quick-actions .mds-commercial-dashboard-card[href="/fidelidade"] { order: 180; }
       .quick-actions .mds-commercial-dashboard-card[href="/promocoes"] { order: 190; }
       .quick-actions .mds-commercial-dashboard-card[href="/integracoes"] { order: 200; }
@@ -42,12 +66,33 @@
     document.head.appendChild(style);
   };
 
-  const ensureCards = () => {
-    const actions = document.querySelector('.quick-actions');
+  const ensureCompanyNav = (adminMarker) => {
+    const nav = document.querySelector('#staff-sidebar-nav');
+    if (!nav || nav.querySelector(`[${COMPANY_NAV_ATTR}]`)) return;
+
+    const companyLink = document.createElement('a');
+    companyLink.className = 'nav-link mds-company-nav-link';
+    companyLink.href = '/minha-empresa';
+    companyLink.setAttribute(COMPANY_NAV_ATTR, 'true');
+    companyLink.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2M13 10h2M9 14h2M13 14h2"/>
+      </svg>
+      <span>Minha empresa</span>
+    `;
+
+    nav.insertBefore(companyLink, adminMarker);
+  };
+
+  const ensureCommercialUi = () => {
     const adminMarker = document.querySelector('#staff-sidebar-nav [data-mds-commercial-links]');
-    if (!actions || !adminMarker) return;
+    if (!adminMarker) return;
 
     ensureStyles();
+    ensureCompanyNav(adminMarker);
+
+    const actions = document.querySelector('.quick-actions');
+    if (!actions) return;
 
     for (const item of commercialCards) {
       if (actions.querySelector(`[${CARD_ATTR}="${item.href}"]`)) continue;
@@ -67,12 +112,12 @@
     }
   };
 
-  const observer = new MutationObserver(() => ensureCards());
+  const observer = new MutationObserver(() => ensureCommercialUi());
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ensureCards, { once: true });
+    document.addEventListener('DOMContentLoaded', ensureCommercialUi, { once: true });
   } else {
-    ensureCards();
+    ensureCommercialUi();
   }
 })();
