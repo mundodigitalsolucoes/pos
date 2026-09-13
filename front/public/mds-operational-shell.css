@@ -87,6 +87,29 @@
   display: none !important;
 }
 
+/* Painel 2.0: prioritize the restaurant's daily workflow without inventing routes.
+ * Existing RBAC/module checks remain authoritative because links are only repositioned visually.
+ */
+.nav {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.nav > a.nav-link[href="/dashboard"] { order: 10; }
+.nav > a.nav-link[href="/staff/orders"] { order: 20; }
+.nav > .nav-section:has(a[href="/tables"]) { order: 30; }
+.nav > .nav-section:has(a[href="/working-plan"]) { order: 40; }
+.nav > .nav-section:has(a[href="/products"]) { order: 50; }
+.nav > .nav-section:has(a[href="/settings"]) { order: 60; }
+.nav > a.nav-link[href="/my-shift"] { order: 70; }
+.nav > a.nav-link[href="/talk"] { order: 80; }
+
+/* Secondary staff tools should not compete visually with the core sales/operation flow. */
+.nav > a.nav-link[href="/my-shift"],
+.nav > a.nav-link[href="/talk"] {
+  margin-top: 0 !important;
+}
+
 @media (max-width: 599px) {
   .sidebar .logo-container::before {
     width: 140px !important;
