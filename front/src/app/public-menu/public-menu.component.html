@@ -133,7 +133,12 @@
       @if (menuLoading()) {
         <p class="public-menu-status">{{ 'COMMON.LOADING' | translate }}</p>
       } @else if (categories().length === 0) {
-        <p class="public-menu-status public-menu-empty">{{ 'PUBLIC_MENU.EMPTY_MENU' | translate }}</p>
+        <div class="public-menu-no-results public-menu-empty-state">
+          <span class="public-menu-no-results-icon" aria-hidden="true">☰</span>
+          <h3>Cardápio em atualização</h3>
+          <p>Os itens publicados deste restaurante ainda não estão disponíveis neste cardápio.</p>
+          <a [routerLink]="['/delivery', tenantId()]" class="public-menu-inline-order-link">Ver opções de pedido →</a>
+        </div>
       } @else if (visibleCategories().length === 0) {
         <div class="public-menu-no-results">
           <span class="public-menu-no-results-icon" aria-hidden="true">⌕</span>
@@ -365,7 +370,12 @@
       }
 
       <div class="public-menu-footer-actions">
-        <span class="public-menu-powered-by">Tecnologia MDS Food</span>
+        <a
+          class="public-menu-powered-by"
+          href="https://mundodigitalsolucoes.com.br/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Mundo Digital Soluções</a>
         <app-legal-links
           [termsUrl]="tenant()?.terms_of_service_url"
           [privacyUrl]="tenant()?.privacy_policy_url"
