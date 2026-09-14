@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 import {
   ApiService,
   PublicTenantMenuCategory,
+  PublicTenantMenuProduct,
   PublicTenantMenuResponse,
   TenantSummary,
 } from '../services/api.service';
@@ -82,6 +83,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   errorKind = signal<'invalid_tenant' | 'tenant_not_found' | 'menu_load_failed' | null>(null);
   merchandising = signal<Record<number, PublicCatalogMerchandising>>({});
   comboCompositions = signal<Record<number, PublicComboItem[]>>({});
+  searchQuery = signal('');
   /** Category ids collapsed by user toggle (default: all expanded). */
   private collapsedCategoryIds = signal<Set<string>>(new Set());
 
@@ -211,11 +213,57 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     return this.menu()?.categories ?? [];
   }
 
+  visibleCategories(): PublicTenantMenuCategory[] {
+    const query = this.normalizedSearchQuery();
+    if (!query) return this.categories();
+
+    return this.categories()
+      .map((category) => ({
+        ...category,
+        products: category.products.filter((product) => this.productMatchesSearch(product, category, query)),
+      }))
+      .filter((category) => category.products.length > 0);
+  }
+
+  featuredProducts(): PublicTenantMenuProduct[] {
+    const query = this.normalizedSearchQuery();
+    const featured: PublicTenantMenuProduct[] = [];
+    for (const category of this.categories()) {
+      for (const product of category.products) {
+        if (!this.isFeatured(product.id)) continue;
+        if (query && !this.productMatchesSearch(product, category, query)) continue;
+        featured.push(product);
+      }
+    }
+    return featured;
+  }
+
+  onSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement | null)?.value ?? '';
+    this.searchQuery.set(value);
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  scrollToCategory(categoryId: string): void {
+    if (typeof document === 'undefined') return;
+    document.getElementById(`cat-${categoryId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  scrollToFeatured(): void {
+    if (typeof document === 'undefined') return;
+    document.getElementById('public-menu-featured')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   isCategoryExpanded(categoryId: string): boolean {
+    if (this.normalizedSearchQuery()) return true;
     return !this.collapsedCategoryIds().has(categoryId);
   }
 
   toggleCategory(categoryId: string): void {
+    if (this.normalizedSearchQuery()) return;
     this.collapsedCategoryIds.update((ids) => {
       const next = new Set(ids);
       if (next.has(categoryId)) {
@@ -328,6 +376,37 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
 
   productLabels(productId: number): string[] {
     return this.merchandising()[productId]?.labels ?? [];
+  }
+
+  private normalizedSearchQuery(): string {
+    return this.normalizeSearchValue(this.searchQuery());
+  }
+
+  private productMatchesSearch(
+    product: PublicTenantMenuProduct,
+    category: PublicTenantMenuCategory,
+    normalizedQuery: string,
+  ): boolean {
+    const searchable = [
+      product.name,
+      product.description,
+      product.category,
+      product.subcategory,
+      category.name,
+      ...this.productLabels(product.id),
+      ...this.comboItems(product.id).map((item) => item.name),
+    ]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .join(' ');
+    return this.normalizeSearchValue(searchable).includes(normalizedQuery);
+  }
+
+  private normalizeSearchValue(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('pt-BR')
+      .trim();
   }
 
   private updateDocumentTitle(): void {
