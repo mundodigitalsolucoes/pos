@@ -82,13 +82,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           return throwError(() => error);
         }
 
-        // CheckAuth (GET /users/me) failing is expected when not logged in; do not redirect or refresh.
-        // Let the route guard or component handle it (e.g. authGuard redirects for protected routes).
-        if (req.url.includes('/users/me')) {
-          return throwError(() => error);
-        }
-
-        // Don't try to refresh if the failing request is the refresh or login endpoint
+        // Don't try to refresh if the failing request is the refresh or login endpoint.
+        // GET /users/me is intentionally NOT excluded: after the short-lived access token expires,
+        // route guards use this endpoint to restore the cached user. Letting it participate in the
+        // refresh flow keeps an otherwise valid refresh-token session alive after an idle tab.
         const isAuthEndpoint = req.url.includes('/refresh') ||
           req.url.includes('/token') ||
           req.url.includes('/logout');
