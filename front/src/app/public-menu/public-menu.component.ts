@@ -16,6 +16,7 @@ import { merge } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   ApiService,
+  LoyaltyProgramPublic,
   PublicTenantMenuCategory,
   PublicTenantMenuProduct,
   PublicTenantMenuResponse,
@@ -83,8 +84,9 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   errorKind = signal<'invalid_tenant' | 'tenant_not_found' | 'menu_load_failed' | null>(null);
   merchandising = signal<Record<number, PublicCatalogMerchandising>>({});
   comboCompositions = signal<Record<number, PublicComboItem[]>>({});
+  loyaltyProgram = signal<LoyaltyProgramPublic | null>(null);
   searchQuery = signal('');
-  /** Category ids collapsed by user toggle (default: all expanded). */
+  infoOpen = signal(false);
   private collapsedCategoryIds = signal<Set<string>>(new Set());
 
   constructor() {
@@ -93,9 +95,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const langParam = this.route.snapshot.queryParamMap.get('lang');
-    if (langParam?.trim()) {
-      this.language.setLanguage(langParam.trim());
-    }
+    if (langParam?.trim()) this.language.setLanguage(langParam.trim());
 
     merge(
       this.translate.onLangChange,
@@ -105,9 +105,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.updateDocumentTitle();
-        if (this.tenant() && !this.errorKind()) {
-          this.reloadMenu();
-        }
+        if (this.tenant() && !this.errorKind()) this.reloadMenu();
       });
 
     const idParam = this.route.snapshot.paramMap.get('tenantId');
@@ -118,10 +116,12 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
       this.updateDocumentTitle();
       return;
     }
+
     this.tenantId.set(tid);
     this.updateDocumentTitle();
     this.loadMerchandising(tid);
     this.loadComboCompositions(tid);
+    this.loadLoyalty(tid);
 
     this.api.getPublicTenant(tid).subscribe({
       next: (t) => {
@@ -137,9 +137,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    // Title reset handled by next navigation.
-  }
+  ngOnDestroy(): void {}
 
   private loadMenu(tenantId: number): void {
     this.menuLoading.set(true);
@@ -167,10 +165,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
         next: (rows) => {
           const mapped: Record<number, PublicCatalogMerchandising> = {};
           for (const row of rows) {
-            mapped[row.product_id] = {
-              ...row,
-              labels: Array.isArray(row.labels) ? row.labels : [],
-            };
+            mapped[row.product_id] = { ...row, labels: Array.isArray(row.labels) ? row.labels : [] };
           }
           this.merchandising.set(mapped);
         },
@@ -185,13 +180,18 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (rows) => {
           const mapped: Record<number, PublicComboItem[]> = {};
-          for (const row of rows) {
-            mapped[row.product_id] = Array.isArray(row.items) ? row.items : [];
-          }
+          for (const row of rows) mapped[row.product_id] = Array.isArray(row.items) ? row.items : [];
           this.comboCompositions.set(mapped);
         },
         error: () => this.comboCompositions.set({}),
       });
+  }
+
+  private loadLoyalty(tenantId: number): void {
+    this.api.getPublicLoyaltyProgram(tenantId).subscribe({
+      next: (program) => this.loyaltyProgram.set(program),
+      error: () => this.loyaltyProgram.set(null),
+    });
   }
 
   private reloadMenu(): void {
@@ -203,9 +203,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
         this.menu.set(data);
         this.menuLoading.set(false);
       },
-      error: () => {
-        this.menuLoading.set(false);
-      },
+      error: () => this.menuLoading.set(false),
     });
   }
 
@@ -216,7 +214,6 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   visibleCategories(): PublicTenantMenuCategory[] {
     const query = this.normalizedSearchQuery();
     if (!query) return this.categories();
-
     return this.categories()
       .map((category) => ({
         ...category,
@@ -239,12 +236,19 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   }
 
   onSearchInput(event: Event): void {
-    const value = (event.target as HTMLInputElement | null)?.value ?? '';
-    this.searchQuery.set(value);
+    this.searchQuery.set((event.target as HTMLInputElement | null)?.value ?? '');
   }
 
   clearSearch(): void {
     this.searchQuery.set('');
+  }
+
+  openInfo(): void {
+    this.infoOpen.set(true);
+  }
+
+  closeInfo(): void {
+    this.infoOpen.set(false);
   }
 
   scrollToCategory(categoryId: string): void {
@@ -266,16 +270,11 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     if (this.normalizedSearchQuery()) return;
     this.collapsedCategoryIds.update((ids) => {
       const next = new Set(ids);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
+      next.has(categoryId) ? next.delete(categoryId) : next.add(categoryId);
       return next;
     });
   }
 
-  /** Translation key for known API category names; falls back to raw value. */
   getCategoryLabel(category: string): string {
     const keyMap: Record<string, string> = {
       Starters: 'PRODUCTS.CATEGORY_STARTERS',
@@ -286,8 +285,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
       Other: 'PUBLIC_MENU.CATEGORY_OTHER',
     };
     const key = keyMap[category];
-    if (key) return this.translate.instant(key);
-    return category;
+    return key ? this.translate.instant(key) : category;
   }
 
   categoryPanelId(categoryId: string): string {
@@ -311,8 +309,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   }
 
   getLogoSafeUrl(url: string | null): SafeResourceUrl | string {
-    if (!url) return '';
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : '';
   }
 
   headerBackgroundStyle(): SafeStyle | null {
@@ -333,8 +330,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   formatPrice(product: { price_formatted: string }): string {
     const amount = product.price_formatted;
     const code = this.currencyLabel();
-    if (!code) return amount;
-    return `${amount} ${code}`;
+    return code ? `${amount} ${code}` : amount;
   }
 
   modifierGroups(product: unknown): PublicModifierGroup[] {
@@ -378,6 +374,16 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     return this.merchandising()[productId]?.labels ?? [];
   }
 
+  whatsappHref(): string | null {
+    const value = this.tenant()?.whatsapp?.replace(/\D/g, '') ?? '';
+    return value ? `https://wa.me/${value}` : null;
+  }
+
+  phoneHref(): string | null {
+    const value = this.tenant()?.phone?.trim();
+    return value ? `tel:${value.replace(/\s/g, '')}` : null;
+  }
+
   private normalizedSearchQuery(): string {
     return this.normalizeSearchValue(this.searchQuery());
   }
@@ -413,20 +419,14 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     const name = this.displayName();
     const err = this.errorKind();
     let key: string;
-    if (this.loading() && !err) {
-      key = 'PUBLIC_MENU.LOADING';
-    } else if (err === 'invalid_tenant') {
-      key = 'PUBLIC_MENU.INVALID_TENANT';
-    } else if (err === 'tenant_not_found') {
-      key = 'PUBLIC_MENU.TENANT_NOT_FOUND';
-    } else if (err === 'menu_load_failed') {
-      key = 'PUBLIC_MENU.LOAD_FAILED';
-    } else if (name) {
+    if (this.loading() && !err) key = 'PUBLIC_MENU.LOADING';
+    else if (err === 'invalid_tenant') key = 'PUBLIC_MENU.INVALID_TENANT';
+    else if (err === 'tenant_not_found') key = 'PUBLIC_MENU.TENANT_NOT_FOUND';
+    else if (err === 'menu_load_failed') key = 'PUBLIC_MENU.LOAD_FAILED';
+    else if (name) {
       this.title.setTitle(`${name} — ${this.translate.instant('PUBLIC_MENU.PAGE_TITLE')}`);
       return;
-    } else {
-      key = 'PUBLIC_MENU.PAGE_TITLE';
-    }
+    } else key = 'PUBLIC_MENU.PAGE_TITLE';
     this.title.setTitle(this.translate.instant(key));
   }
 }

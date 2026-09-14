@@ -1,26 +1,21 @@
 <div
-  class="book-page public-menu-page"
-  [style.--color-bg]="tenant()?.public_background_color ?? null"
-  [style.--hero-header-bg]="tenant()?.public_background_color ?? null"
+  class="public-menu-page"
+  id="inicio"
+  [style.--store-brand]="tenant()?.public_background_color ?? null"
 >
   @if (loading()) {
     <div class="public-menu-shell">
-      <div class="public-menu-top-bar">
-        <app-language-picker class="book-language-picker"></app-language-picker>
-      </div>
-      <div class="loading-screen">
+      <div class="public-menu-loading-card">
+        <img src="/logo-mds-food-header.png" alt="MDS Food" />
         <p>{{ 'PUBLIC_MENU.LOADING' | translate }}</p>
       </div>
     </div>
   } @else if (errorKind()) {
     <div class="public-menu-shell">
-      <div class="public-menu-top-bar">
-        <app-language-picker class="book-language-picker"></app-language-picker>
-      </div>
-      <main class="book-content">
-        <div class="book-card public-menu-error-card">
+      <main class="public-menu-error-wrap">
+        <div class="public-menu-error-card">
           <h1>{{ 'PUBLIC_MENU.PAGE_TITLE' | translate }}</h1>
-          <p class="form-error">
+          <p>
             @if (errorKind() === 'invalid_tenant') {
               {{ 'PUBLIC_MENU.INVALID_TENANT' | translate }}
             } @else if (errorKind() === 'tenant_not_found') {
@@ -29,366 +24,445 @@
               {{ 'PUBLIC_MENU.LOAD_FAILED' | translate }}
             }
           </p>
-          <a routerLink="/" class="public-menu-back-link">{{ 'PUBLIC_MENU.BACK_HOME' | translate }}</a>
+          <a routerLink="/">{{ 'PUBLIC_MENU.BACK_HOME' | translate }}</a>
         </div>
       </main>
     </div>
   } @else {
-    <header
-      class="hero-header public-menu-hero"
+    <header class="store-topbar">
+      <div class="store-topbar-inner">
+        <a class="store-home-link" href="#inicio" aria-label="Início">
+          <span aria-hidden="true">⌂</span>
+          <span>Início</span>
+        </a>
+
+        <nav class="store-main-nav" aria-label="Navegação do cardápio">
+          @if (featuredProducts().length > 0) {
+            <button type="button" (click)="scrollToFeatured()">Promoções</button>
+          }
+          <a [routerLink]="['/delivery', tenantId(), 'track']">Pedidos</a>
+        </nav>
+
+        <div class="store-account-nav">
+          <a routerLink="/customer/login">Entrar</a>
+          <a routerLink="/customer/register" class="store-register-link">Cadastrar</a>
+          <app-language-picker class="store-language-picker"></app-language-picker>
+        </div>
+      </div>
+    </header>
+
+    <section
+      class="store-cover"
       [class.has-bg-image]="tenant()?.header_background_filename"
       [style.background-image]="headerBackgroundStyle()"
+      aria-label="Capa do restaurante"
     >
-      <div class="hero-overlay"></div>
-      <div class="public-menu-hero-tools">
-        <app-language-picker class="book-language-picker"></app-language-picker>
-      </div>
+      <div class="store-cover-overlay"></div>
+    </section>
 
-      <div class="hero-content public-menu-hero-content">
-        <div class="public-menu-brand-block">
+    <section class="store-identity-shell">
+      <div class="store-identity-card">
+        <div class="store-identity-main">
           @if (logoUrl()) {
-            <div class="logo-container public-menu-logo-container">
-              <img [src]="getLogoSafeUrl(logoUrl())" [alt]="displayName()" class="tenant-logo" />
+            <div class="store-logo-wrap">
+              <img [src]="getLogoSafeUrl(logoUrl())" [alt]="displayName()" class="store-logo" />
             </div>
+          } @else {
+            <div class="store-logo-wrap store-logo-placeholder" aria-hidden="true">{{ displayName().slice(0, 1) }}</div>
           }
 
-          <div class="hero-info public-menu-hero-info">
-            <p class="public-menu-eyebrow">Cardápio online</p>
-            <h1 class="restaurant-name">{{ displayName() }}</h1>
+          <div class="store-identity-copy">
+            <div class="store-title-row">
+              <h1>{{ displayName() }}</h1>
+              <span class="store-status-pill store-status-neutral">Consulte o horário</span>
+            </div>
             @if (tenant()?.description?.trim()) {
-              <p class="restaurant-description">{{ tenant()!.description }}</p>
+              <p class="store-description">{{ tenant()!.description }}</p>
             }
-
-            <div class="public-menu-restaurant-meta" aria-label="Informações do restaurante">
-              @if (tenant()?.opening_hours?.trim()) {
-                <span class="public-menu-meta-chip">
-                  <span aria-hidden="true">◷</span>
-                  {{ tenant()!.opening_hours }}
-                </span>
-              }
+            <div class="store-meta-list">
               @if (tenant()?.address?.trim()) {
-                <span class="public-menu-meta-chip">
-                  <span aria-hidden="true">⌖</span>
-                  {{ tenant()!.address }}
-                </span>
+                <span><span aria-hidden="true">⌖</span>{{ tenant()!.address }}</span>
+              }
+              @if (tenant()?.opening_hours?.trim()) {
+                <span><span aria-hidden="true">◷</span>{{ tenant()!.opening_hours }}</span>
               }
             </div>
           </div>
         </div>
 
-        <a [routerLink]="['/delivery', tenantId()]" class="public-menu-hero-cta">
-          Fazer pedido
-          <span aria-hidden="true">→</span>
-        </a>
-      </div>
-    </header>
-
-    <div class="public-menu-discovery-shell">
-      <div class="public-menu-search-row">
-        <label class="public-menu-search" aria-label="Buscar no cardápio">
-          <span class="public-menu-search-icon" aria-hidden="true">⌕</span>
-          <input
-            type="search"
-            placeholder="Buscar pratos, bebidas e ingredientes"
-            [value]="searchQuery()"
-            (input)="onSearchInput($event)"
-            autocomplete="off"
-          />
-          @if (searchQuery().trim()) {
-            <button type="button" class="public-menu-search-clear" (click)="clearSearch()" aria-label="Limpar busca">
-              ×
-            </button>
-          }
-        </label>
-      </div>
-
-      @if (categories().length > 0) {
-        <nav class="public-menu-category-nav" aria-label="Categorias do cardápio">
-          @if (featuredProducts().length > 0) {
-            <button type="button" class="public-menu-category-pill public-menu-category-pill-featured" (click)="scrollToFeatured()">
-              ★ Destaques
-            </button>
-          }
-          @for (cat of categories(); track cat.id) {
-            <button type="button" class="public-menu-category-pill" (click)="scrollToCategory(cat.id)">
-              {{ getCategoryLabel(cat.name) }}
-            </button>
-          }
-        </nav>
-      }
-    </div>
-
-    <main class="book-content public-menu-content">
-      <div class="public-menu-content-heading">
-        <div>
-          <p class="public-menu-section-kicker">Escolha seus favoritos</p>
-          <h2>Peça do seu jeito</h2>
+        <div class="store-identity-actions">
+          <button type="button" class="store-info-button" (click)="openInfo()">Mais informações</button>
+          <a [routerLink]="['/delivery', tenantId()]" class="store-order-button">Fazer pedido</a>
         </div>
-        <a [routerLink]="['/delivery', tenantId()]" class="public-menu-inline-order-link">
-          Ir para o pedido
-          <span aria-hidden="true">→</span>
-        </a>
       </div>
+    </section>
 
-      @if (menuLoading()) {
-        <p class="public-menu-status">{{ 'COMMON.LOADING' | translate }}</p>
-      } @else if (categories().length === 0) {
-        <div class="public-menu-no-results public-menu-empty-state">
-          <span class="public-menu-no-results-icon" aria-hidden="true">☰</span>
-          <h3>Cardápio em atualização</h3>
-          <p>Os itens publicados deste restaurante ainda não estão disponíveis neste cardápio.</p>
-          <a [routerLink]="['/delivery', tenantId()]" class="public-menu-inline-order-link">Ver opções de pedido →</a>
-        </div>
-      } @else if (visibleCategories().length === 0) {
-        <div class="public-menu-no-results">
-          <span class="public-menu-no-results-icon" aria-hidden="true">⌕</span>
-          <h3>Nenhum item encontrado</h3>
-          <p>Tente buscar por outro prato, bebida ou ingrediente.</p>
-          <button type="button" class="public-menu-clear-results" (click)="clearSearch()">Limpar busca</button>
-        </div>
-      } @else {
-        @if (featuredProducts().length > 0) {
-          <section class="public-menu-category public-menu-featured-section" id="public-menu-featured" aria-labelledby="public-menu-featured-title">
-            <div class="public-menu-category-heading">
-              <div>
-                <p class="public-menu-section-kicker">Seleção da casa</p>
-                <h2 class="public-menu-category-title" id="public-menu-featured-title">Destaques</h2>
-              </div>
-              <span class="public-menu-category-count">{{ featuredProducts().length }} itens</span>
+    <main class="store-main-layout">
+      <div class="store-catalog-column">
+        <section class="store-search-row" aria-label="Busca e categorias">
+          <label class="store-search-box">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              placeholder="Buscar produtos"
+              [value]="searchQuery()"
+              (input)="onSearchInput($event)"
+              autocomplete="off"
+            />
+            @if (searchQuery().trim()) {
+              <button type="button" (click)="clearSearch()" aria-label="Limpar busca">×</button>
+            }
+          </label>
+
+          <div class="store-category-strip" aria-label="Categorias do cardápio">
+            @if (featuredProducts().length > 0) {
+              <button type="button" class="is-featured" (click)="scrollToFeatured()">★ Destaques</button>
+            }
+            @for (cat of categories(); track cat.id) {
+              <button type="button" (click)="scrollToCategory(cat.id)">{{ getCategoryLabel(cat.name) }}</button>
+            }
+          </div>
+        </section>
+
+        @if (loyaltyProgram()) {
+          <section class="store-loyalty-banner">
+            <div>
+              <span class="store-banner-kicker">Fidelidade</span>
+              <h2>{{ loyaltyProgram()!.program_name }}</h2>
+              <p>Participe do programa de fidelidade deste restaurante e acompanhe seus benefícios.</p>
             </div>
+            <a [routerLink]="['/loyalty', tenantId()]">Quero participar</a>
+          </section>
+        }
 
-            <ul class="public-menu-product-list public-menu-featured-grid">
-              @for (product of featuredProducts(); track product.id) {
-                <li class="public-menu-product mds-featured-product" [class.public-menu-product-unavailable]="!product.available">
-                  <div class="public-menu-product-body">
-                    <div class="public-menu-product-topline">
-                      <div class="mds-product-badges" aria-label="Informações do produto">
-                        <span class="mds-product-badge mds-product-badge-featured">★ Destaque</span>
+        @if (menuLoading()) {
+          <div class="store-empty-card">{{ 'COMMON.LOADING' | translate }}</div>
+        } @else if (categories().length === 0) {
+          <section class="store-empty-card">
+            <div class="store-empty-icon" aria-hidden="true">☰</div>
+            <h2>Cardápio em atualização</h2>
+            <p>Os produtos ainda não foram publicados neste cardápio.</p>
+          </section>
+        } @else if (visibleCategories().length === 0) {
+          <section class="store-empty-card">
+            <div class="store-empty-icon" aria-hidden="true">⌕</div>
+            <h2>Nenhum produto encontrado</h2>
+            <p>Tente buscar por outro nome, categoria ou ingrediente.</p>
+            <button type="button" class="store-clear-search" (click)="clearSearch()">Limpar busca</button>
+          </section>
+        } @else {
+          @if (featuredProducts().length > 0) {
+            <section class="store-category-section" id="public-menu-featured" aria-labelledby="public-menu-featured-title">
+              <div class="store-section-title-row">
+                <div>
+                  <span class="store-section-kicker">Seleção da casa</span>
+                  <h2 id="public-menu-featured-title">Destaques</h2>
+                </div>
+                <span>{{ featuredProducts().length }} itens</span>
+              </div>
+
+              <div class="store-product-grid">
+                @for (product of featuredProducts(); track product.id) {
+                  <article class="store-product-card" [class.is-unavailable]="!product.available">
+                    <div class="store-product-copy">
+                      <div class="store-product-badges">
+                        <span class="store-badge store-badge-featured">★ Destaque</span>
                         @for (label of productLabels(product.id); track label) {
-                          <span class="mds-product-badge">{{ label }}</span>
+                          <span class="store-badge">{{ label }}</span>
                         }
                       </div>
-                    </div>
-                    <h3 class="public-menu-product-name">{{ product.name }}</h3>
-                    @if (product.description?.trim()) {
-                      <p class="public-menu-product-desc">{{ product.description }}</p>
-                    }
-                    @if (comboItems(product.id).length > 0) {
-                      <div class="mds-combo-composition">
-                        <strong>Este combo inclui</strong>
-                        <div class="mds-combo-composition-items">
+                      <h3>{{ product.name }}</h3>
+                      @if (product.description?.trim()) {
+                        <p>{{ product.description }}</p>
+                      }
+                      @if (comboItems(product.id).length > 0) {
+                        <div class="store-combo-box">
+                          <strong>Este combo inclui</strong>
                           @for (item of comboItems(product.id); track item.product_id) {
                             <span>{{ item.quantity }}× {{ item.name }}</span>
                           }
                         </div>
-                      </div>
-                    }
-                    @if (modifierGroups(product).length > 0) {
-                      <details class="mds-product-modifiers">
-                        <summary>
-                          Personalizável · {{ modifierGroups(product).length }} grupo(s) de opções
-                        </summary>
-                        @for (group of modifierGroups(product); track group.id) {
-                          <div class="mds-product-modifier-group">
-                            <div class="mds-product-modifier-head">
+                      }
+                      @if (modifierGroups(product).length > 0) {
+                        <details class="store-modifier-preview">
+                          <summary>Personalizável · {{ modifierGroups(product).length }} grupo(s)</summary>
+                          @for (group of modifierGroups(product); track group.id) {
+                            <div class="store-modifier-group">
                               <strong>{{ group.name }}</strong>
-                              <span>{{ modifierRule(group) }}</span>
-                            </div>
-                            <div class="mds-product-modifier-options">
+                              <small>{{ modifierRule(group) }}</small>
                               @for (option of group.options; track option.id) {
-                                <span class="mds-product-modifier-option">
-                                  {{ option.name }}
-                                  <small>{{ formatModifierPrice(option.price_delta_cents) }}</small>
-                                </span>
+                                <span>{{ option.name }} · {{ formatModifierPrice(option.price_delta_cents) }}</span>
                               }
                             </div>
-                          </div>
-                        }
-                      </details>
-                    }
-                    <div class="public-menu-product-footer">
-                      <div class="public-menu-price-stack">
-                        @if (product.list_price_formatted) {
-                          <span class="public-menu-list-price">{{ product.list_price_formatted }}</span>
-                        }
-                        <span class="public-menu-product-price">{{ formatPrice(product) }}</span>
-                        @if (product.promo_label) {
-                          <span class="public-menu-promo-label">{{ product.promo_label }}</span>
-                        }
-                      </div>
-                      @if (product.available) {
-                        <a [routerLink]="['/delivery', tenantId()]" class="public-menu-product-cta">Pedir</a>
-                      } @else {
-                        <span class="public-menu-unavailable-label">Indisponível</span>
-                      }
-                    </div>
-                  </div>
-                  <div class="public-menu-product-media" [class.public-menu-product-media-empty]="!product.image_url">
-                    @if (product.image_url) {
-                      <img
-                        class="public-menu-product-image"
-                        [src]="productImageUrl(product.image_url)"
-                        [alt]="product.name"
-                        loading="lazy"
-                        (error)="$any($event.target).style.display = 'none'"
-                      />
-                    } @else {
-                      <span class="public-menu-image-placeholder" aria-hidden="true">MDS</span>
-                    }
-                  </div>
-                </li>
-              }
-            </ul>
-          </section>
-        }
-
-        @for (cat of visibleCategories(); track cat.id) {
-          <section class="public-menu-category" [attr.aria-labelledby]="'cat-' + cat.id">
-            <div class="public-menu-category-heading">
-              <h2 class="public-menu-category-title" [id]="'cat-' + cat.id">
-                <button
-                  type="button"
-                  class="public-menu-category-toggle"
-                  (click)="toggleCategory(cat.id)"
-                  [attr.aria-expanded]="isCategoryExpanded(cat.id)"
-                  [attr.aria-controls]="categoryPanelId(cat.id)"
-                  [attr.aria-label]="categoryToggleAriaLabel(cat)"
-                >
-                  <span class="public-menu-category-name">{{ getCategoryLabel(cat.name) }}</span>
-                  <span class="public-menu-category-chevron" aria-hidden="true">{{ isCategoryExpanded(cat.id) ? '−' : '+' }}</span>
-                </button>
-              </h2>
-              <span class="public-menu-category-count">{{ cat.products.length }} itens</span>
-            </div>
-
-            @if (isCategoryExpanded(cat.id)) {
-              <ul
-                class="public-menu-product-list"
-                [id]="categoryPanelId(cat.id)"
-                role="region"
-                [attr.aria-labelledby]="'cat-' + cat.id"
-              >
-                @for (product of cat.products; track product.id) {
-                  <li
-                    class="public-menu-product"
-                    [class.mds-featured-product]="isFeatured(product.id)"
-                    [class.public-menu-product-unavailable]="!product.available"
-                  >
-                    <div class="public-menu-product-body">
-                      @if (isFeatured(product.id) || productLabels(product.id).length > 0) {
-                        <div class="mds-product-badges" aria-label="Informações do produto">
-                          @if (isFeatured(product.id)) {
-                            <span class="mds-product-badge mds-product-badge-featured">★ Destaque</span>
                           }
-                          @for (label of productLabels(product.id); track label) {
-                            <span class="mds-product-badge">{{ label }}</span>
+                        </details>
+                      }
+                      <div class="store-product-footer">
+                        <div class="store-price-stack">
+                          @if (product.list_price_formatted) {
+                            <span class="store-list-price">{{ product.list_price_formatted }}</span>
+                          }
+                          <strong>{{ formatPrice(product) }}</strong>
+                          @if (product.promo_label) {
+                            <small>{{ product.promo_label }}</small>
                           }
                         </div>
+                        @if (product.available) {
+                          <a [routerLink]="['/delivery', tenantId()]">Adicionar</a>
+                        } @else {
+                          <span class="store-unavailable">Indisponível</span>
+                        }
+                      </div>
+                    </div>
+                    <div class="store-product-media" [class.no-image]="!product.image_url">
+                      @if (product.image_url) {
+                        <img [src]="productImageUrl(product.image_url)" [alt]="product.name" loading="lazy" />
+                      } @else {
+                        <span aria-hidden="true">MDS</span>
                       }
+                    </div>
+                  </article>
+                }
+              </div>
+            </section>
+          }
 
-                      <h3 class="public-menu-product-name">{{ product.name }}</h3>
+          @for (cat of visibleCategories(); track cat.id) {
+            <section class="store-category-section" [attr.aria-labelledby]="'cat-' + cat.id">
+              <div class="store-section-title-row">
+                <h2 [id]="'cat-' + cat.id">
+                  <button
+                    type="button"
+                    class="store-category-toggle"
+                    (click)="toggleCategory(cat.id)"
+                    [attr.aria-expanded]="isCategoryExpanded(cat.id)"
+                    [attr.aria-controls]="categoryPanelId(cat.id)"
+                    [attr.aria-label]="categoryToggleAriaLabel(cat)"
+                  >
+                    <span>{{ getCategoryLabel(cat.name) }}</span>
+                    <span aria-hidden="true">{{ isCategoryExpanded(cat.id) ? '−' : '+' }}</span>
+                  </button>
+                </h2>
+                <span>{{ cat.products.length }} itens</span>
+              </div>
 
-                      @if (product.description?.trim()) {
-                        <p class="public-menu-product-desc">{{ product.description }}</p>
-                      }
-
-                      @if (comboItems(product.id).length > 0) {
-                        <div class="mds-combo-composition">
-                          <strong>Este combo inclui</strong>
-                          <div class="mds-combo-composition-items">
+              @if (isCategoryExpanded(cat.id)) {
+                <div class="store-product-grid" [id]="categoryPanelId(cat.id)">
+                  @for (product of cat.products; track product.id) {
+                    <article class="store-product-card" [class.is-unavailable]="!product.available">
+                      <div class="store-product-copy">
+                        @if (isFeatured(product.id) || productLabels(product.id).length > 0) {
+                          <div class="store-product-badges">
+                            @if (isFeatured(product.id)) {
+                              <span class="store-badge store-badge-featured">★ Destaque</span>
+                            }
+                            @for (label of productLabels(product.id); track label) {
+                              <span class="store-badge">{{ label }}</span>
+                            }
+                          </div>
+                        }
+                        <h3>{{ product.name }}</h3>
+                        @if (product.description?.trim()) {
+                          <p>{{ product.description }}</p>
+                        }
+                        @if (comboItems(product.id).length > 0) {
+                          <div class="store-combo-box">
+                            <strong>Este combo inclui</strong>
                             @for (item of comboItems(product.id); track item.product_id) {
                               <span>{{ item.quantity }}× {{ item.name }}</span>
                             }
                           </div>
-                        </div>
-                      }
-
-                      @if (modifierGroups(product).length > 0) {
-                        <details class="mds-product-modifiers">
-                          <summary>
-                            Personalizável · {{ modifierGroups(product).length }} grupo(s) de opções
-                          </summary>
-                          @for (group of modifierGroups(product); track group.id) {
-                            <div class="mds-product-modifier-group">
-                              <div class="mds-product-modifier-head">
+                        }
+                        @if (modifierGroups(product).length > 0) {
+                          <details class="store-modifier-preview">
+                            <summary>Personalizável · {{ modifierGroups(product).length }} grupo(s)</summary>
+                            @for (group of modifierGroups(product); track group.id) {
+                              <div class="store-modifier-group">
                                 <strong>{{ group.name }}</strong>
-                                <span>{{ modifierRule(group) }}</span>
-                              </div>
-                              <div class="mds-product-modifier-options">
+                                <small>{{ modifierRule(group) }}</small>
                                 @for (option of group.options; track option.id) {
-                                  <span class="mds-product-modifier-option">
-                                    {{ option.name }}
-                                    <small>{{ formatModifierPrice(option.price_delta_cents) }}</small>
-                                  </span>
+                                  <span>{{ option.name }} · {{ formatModifierPrice(option.price_delta_cents) }}</span>
                                 }
                               </div>
-                            </div>
-                          }
-                          <a [routerLink]="['/delivery', tenantId()]" class="mds-product-customize-link">
-                            Escolher opções ao pedir
-                          </a>
-                        </details>
-                      }
-
-                      <div class="public-menu-product-footer">
-                        <div class="public-menu-price-stack">
-                          @if (product.list_price_formatted) {
-                            <span class="public-menu-list-price">{{ product.list_price_formatted }}</span>
-                          }
-                          <span class="public-menu-product-price">{{ formatPrice(product) }}</span>
-                          @if (product.promo_label) {
-                            <span class="public-menu-promo-label">{{ product.promo_label }}</span>
+                            }
+                          </details>
+                        }
+                        <div class="store-product-footer">
+                          <div class="store-price-stack">
+                            @if (product.list_price_formatted) {
+                              <span class="store-list-price">{{ product.list_price_formatted }}</span>
+                            }
+                            <strong>{{ formatPrice(product) }}</strong>
+                            @if (product.promo_label) {
+                              <small>{{ product.promo_label }}</small>
+                            }
+                          </div>
+                          @if (product.available) {
+                            <a [routerLink]="['/delivery', tenantId()]">Adicionar</a>
+                          } @else {
+                            <span class="store-unavailable">Indisponível</span>
                           }
                         </div>
-                        @if (product.available) {
-                          <a [routerLink]="['/delivery', tenantId()]" class="public-menu-product-cta">Pedir</a>
+                      </div>
+                      <div class="store-product-media" [class.no-image]="!product.image_url">
+                        @if (product.image_url) {
+                          <img [src]="productImageUrl(product.image_url)" [alt]="product.name" loading="lazy" />
                         } @else {
-                          <span class="public-menu-unavailable-label">Indisponível</span>
+                          <span aria-hidden="true">MDS</span>
                         }
                       </div>
-                    </div>
-
-                    <div class="public-menu-product-media" [class.public-menu-product-media-empty]="!product.image_url">
-                      @if (product.image_url) {
-                        <img
-                          class="public-menu-product-image"
-                          [src]="productImageUrl(product.image_url)"
-                          [alt]="product.name"
-                          loading="lazy"
-                          (error)="$any($event.target).style.display = 'none'"
-                        />
-                      } @else {
-                        <span class="public-menu-image-placeholder" aria-hidden="true">MDS</span>
-                      }
-                    </div>
-                  </li>
-                }
-              </ul>
-            }
-          </section>
+                    </article>
+                  }
+                </div>
+              }
+            </section>
+          }
         }
-      }
-
-      <div class="public-menu-footer-actions">
-        <a
-          class="public-menu-powered-by"
-          href="https://mundodigitalsolucoes.com.br/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >Mundo Digital Soluções</a>
-        <app-legal-links
-          [termsUrl]="tenant()?.terms_of_service_url"
-          [privacyUrl]="tenant()?.privacy_policy_url"
-        />
       </div>
+
+      <aside class="store-order-sidebar" aria-label="Resumo do pedido">
+        <section class="store-delivery-card">
+          <div class="store-side-title">
+            <div class="store-side-icon" aria-hidden="true">⌖</div>
+            <div>
+              <strong>Entrega</strong>
+              <span>Taxa e prazo calculados no pedido</span>
+            </div>
+          </div>
+          <p>Informe seu endereço no fluxo de pedido para calcular a taxa e o tempo de entrega disponíveis.</p>
+          <a [routerLink]="['/delivery', tenantId()]">Calcular taxa e prazo</a>
+        </section>
+
+        <section class="store-bag-card">
+          <div class="store-bag-title">
+            <div>
+              <span>Sua sacola</span>
+              <strong>0 itens</strong>
+            </div>
+            <span aria-hidden="true">🛍</span>
+          </div>
+          <div class="store-bag-empty">
+            <div aria-hidden="true">🛍</div>
+            <strong>Sua sacola está vazia</strong>
+            <p>Escolha seus produtos e personalize no fluxo de pedido.</p>
+          </div>
+          <a [routerLink]="['/delivery', tenantId()]" class="store-bag-cta">Ir para o pedido</a>
+        </section>
+      </aside>
     </main>
 
-    <div class="public-menu-mobile-order-bar">
-      <div>
-        <strong>{{ displayName() }}</strong>
-        <span>Peça online</span>
+    <footer class="store-footer">
+      <div class="store-footer-inner">
+        <div class="store-footer-brand">
+          @if (logoUrl()) {
+            <img [src]="getLogoSafeUrl(logoUrl())" [alt]="displayName()" />
+          }
+          <div>
+            <strong>{{ displayName() }}</strong>
+            @if (tenant()?.address?.trim()) {
+              <span>{{ tenant()!.address }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="store-footer-links">
+          @if (tenant()?.phone?.trim()) {
+            <a [href]="phoneHref()">{{ tenant()!.phone }}</a>
+          }
+          @if (whatsappHref()) {
+            <a [href]="whatsappHref()!" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          }
+          @if (tenant()?.website?.trim()) {
+            <a [href]="tenant()!.website!" target="_blank" rel="noopener noreferrer">Site</a>
+          }
+          <button type="button" (click)="openInfo()">Informações do estabelecimento</button>
+        </div>
+
+        <div class="store-footer-legal">
+          <app-legal-links
+            [termsUrl]="tenant()?.terms_of_service_url"
+            [privacyUrl]="tenant()?.privacy_policy_url"
+          />
+          <a href="https://mundodigitalsolucoes.com.br/" target="_blank" rel="noopener noreferrer">
+            Tecnologia Mundo Digital Soluções
+          </a>
+        </div>
       </div>
-      <a [routerLink]="['/delivery', tenantId()]">Fazer pedido</a>
+    </footer>
+
+    <div class="store-mobile-order-bar">
+      <a [routerLink]="['/delivery', tenantId()]">
+        <span>Ver sacola</span>
+        <strong>Fazer pedido</strong>
+      </a>
     </div>
+
+    @if (infoOpen()) {
+      <div class="store-modal-backdrop" (click)="closeInfo()">
+        <section class="store-info-modal" role="dialog" aria-modal="true" aria-label="Informações do restaurante" (click)="$event.stopPropagation()">
+          <header>
+            <h2>{{ displayName() }}</h2>
+            <button type="button" (click)="closeInfo()" aria-label="Fechar">×</button>
+          </header>
+
+          <div class="store-info-tabs" aria-hidden="true">
+            <span class="is-active">Sobre</span>
+            <span>Horário</span>
+            <span>Pagamento</span>
+          </div>
+
+          <div class="store-info-content">
+            <div class="store-info-about">
+              @if (logoUrl()) {
+                <img [src]="getLogoSafeUrl(logoUrl())" [alt]="displayName()" />
+              }
+              <div>
+                <h3>Sobre</h3>
+                <p>{{ tenant()?.description?.trim() || 'Informações do estabelecimento disponíveis neste cardápio.' }}</p>
+              </div>
+            </div>
+
+            @if (tenant()?.opening_hours?.trim()) {
+              <section>
+                <h3>Horário</h3>
+                <p>{{ tenant()!.opening_hours }}</p>
+              </section>
+            }
+
+            @if (tenant()?.phone?.trim() || tenant()?.whatsapp?.trim() || tenant()?.email?.trim()) {
+              <section>
+                <h3>Contato</h3>
+                <div class="store-info-contact-list">
+                  @if (tenant()?.phone?.trim()) {
+                    <a [href]="phoneHref()">{{ tenant()!.phone }}</a>
+                  }
+                  @if (whatsappHref()) {
+                    <a [href]="whatsappHref()!" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                  }
+                  @if (tenant()?.email?.trim()) {
+                    <a [href]="'mailto:' + tenant()!.email">{{ tenant()!.email }}</a>
+                  }
+                </div>
+              </section>
+            }
+
+            @if (tenant()?.address?.trim()) {
+              <section>
+                <h3>Endereço</h3>
+                <p>{{ tenant()!.address }}</p>
+                @if (tenant()?.public_google_maps_url?.trim()) {
+                  <a [href]="tenant()!.public_google_maps_url!" target="_blank" rel="noopener noreferrer">Abrir no mapa</a>
+                }
+              </section>
+            }
+
+            <section>
+              <h3>Pagamento</h3>
+              <p>As formas disponíveis são apresentadas na finalização do pedido, conforme configuração do restaurante.</p>
+            </section>
+          </div>
+        </section>
+      </div>
+    }
   }
 </div>
