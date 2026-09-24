@@ -25,6 +25,7 @@ import {
 import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LanguageService } from '../services/language.service';
 import { LegalLinksComponent } from '../shared/legal-links.component';
+import { PublicOrderCartService } from '../services/public-order-cart.service';
 
 interface PublicCatalogMerchandising {
   product_id: number;
@@ -74,6 +75,11 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private title = inject(Title);
   private destroyRef = inject(DestroyRef);
+  private orderCart = inject(PublicOrderCartService);
+  cart = this.orderCart.lines;
+  cartCount = this.orderCart.count;
+  cartSubtotalCents = this.orderCart.subtotalCents;
+  selectedProduct = signal<PublicTenantMenuProduct | null>(null);
 
   tenantId = signal(0);
   tenant = signal<TenantSummary | null>(null);
@@ -118,6 +124,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     }
 
     this.tenantId.set(tid);
+    this.orderCart.useTenant(tid);
     this.updateDocumentTitle();
     this.loadMerchandising(tid);
     this.loadComboCompositions(tid);
@@ -253,7 +260,25 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
 
   scrollToCategory(categoryId: string): void {
     if (typeof document === 'undefined') return;
+    if (!this.isCategoryExpanded(categoryId)) this.toggleCategory(categoryId);
     document.getElementById(`cat-${categoryId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  openProduct(product: PublicTenantMenuProduct): void { this.selectedProduct.set(product); }
+  closeProduct(): void { this.selectedProduct.set(null); }
+  addSelectedProduct(): void {
+    const product = this.selectedProduct();
+    if (!product || this.modifierGroups(product).length > 0) return;
+    this.orderCart.add(product);
+    this.closeProduct();
+  }
+  changeQuantity(productId: number, quantity: number): void {
+    this.orderCart.setQuantity(productId, quantity);
+  }
+  formatCents(cents: number): string {
+    const currency = this.currencyLabel() || 'EUR';
+    try { return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100); }
+    catch { return `${(cents / 100).toFixed(2)} ${currency}`; }
   }
 
   scrollToFeatured(): void {
