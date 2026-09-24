@@ -28,11 +28,7 @@ import { LanguageService } from '../services/language.service';
 import { LegalLinksComponent } from '../shared/legal-links.component';
 import { contactPhoneValid } from '../shared/contact-validators';
 import { productStockLeft } from '../shared/product-stock.util';
-
-interface CartLine {
-  product: PublicTenantMenuProduct;
-  quantity: number;
-}
+import { PublicOrderCartService } from '../services/public-order-cart.service';
 
 type CheckoutStep = 'menu' | 'cart' | 'address' | 'pay' | 'success';
 
@@ -52,6 +48,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private title = inject(Title);
   private destroyRef = inject(DestroyRef);
+  private orderCart = inject(PublicOrderCartService);
 
   tenantId = signal(0);
   tenant = signal<TenantSummary | null>(null);
@@ -62,7 +59,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   errorKind = signal<'invalid_tenant' | 'tenant_not_found' | 'menu_load_failed' | null>(null);
 
   step = signal<CheckoutStep>('menu');
-  cart = signal<CartLine[]>([]);
+  cart = this.orderCart.lines;
 
   customerName = '';
   customerPhone = '';
@@ -95,15 +92,13 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   private paymentIntentId = '';
   private collapsedCategoryIds = signal<Set<string>>(new Set());
 
-  cartCount = computed(() => this.cart().reduce((n, l) => n + l.quantity, 0));
+  cartCount = this.orderCart.count;
   cartTotalCents = computed(() => {
     const items = this.cart().reduce((sum, l) => sum + l.product.price_cents * l.quantity, 0);
     const fee = this.deliveryConfig()?.delivery_fee_cents ?? 0;
     return items + (fee > 0 ? fee : 0);
   });
-  cartSubtotalCents = computed(() =>
-    this.cart().reduce((sum, l) => sum + l.product.price_cents * l.quantity, 0),
-  );
+  cartSubtotalCents = this.orderCart.subtotalCents;
 
   constructor() {
     afterNextRender(() => this.updateDocumentTitle());
@@ -137,6 +132,10 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
       return;
     }
     this.tenantId.set(tid);
+    this.orderCart.useTenant(tid);
+    if (this.cartCount() > 0 && this.route.snapshot.queryParamMap.get('cart') === '1') {
+      this.step.set('cart');
+    }
     this.updateDocumentTitle();
 
     this.api.getPublicTenant(tid).subscribe({
@@ -285,23 +284,11 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   }
 
   addToCart(product: PublicTenantMenuProduct): void {
-    if (!product.available) return;
-    this.cart.update((lines) => {
-      const idx = lines.findIndex((l) => l.product.id === product.id);
-      if (idx >= 0) {
-        const next = [...lines];
-        next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
-        return next;
-      }
-      return [...lines, { product, quantity: 1 }];
-    });
+    this.orderCart.add(product);
   }
 
   setQty(productId: number, quantity: number): void {
-    this.cart.update((lines) => {
-      if (quantity <= 0) return lines.filter((l) => l.product.id !== productId);
-      return lines.map((l) => (l.product.id === productId ? { ...l, quantity } : l));
-    });
+    this.orderCart.setQuantity(productId, quantity);
   }
 
   goToCart(): void {
