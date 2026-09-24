@@ -9,6 +9,7 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LegalLinksComponent } from '../shared/legal-links.component';
 import { contactPhoneValid } from '../shared/contact-validators';
 import { DeliveryCheckoutComponent } from './delivery-checkout.component';
+import { PublicOrderCartService, PublicOrderLine } from '../services/public-order-cart.service';
 
 interface CatalogModifierOption {
   id: number;
@@ -41,15 +42,6 @@ type DeliveryCatalogProduct = PublicTenantMenuProduct & {
   modifier_groups?: CatalogModifierGroup[];
 };
 
-interface CatalogCartLine {
-  key: string;
-  product: DeliveryCatalogProduct;
-  quantity: number;
-  selectedOptionIds: number[];
-  modifierDeltaCents: number;
-  modifierSummary: string[];
-}
-
 interface CatalogCheckoutResponse {
   id: number;
   public_order_token: string;
@@ -75,6 +67,7 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
   private readonly catalogHttp = inject(HttpClient);
   private readonly catalogApi = inject(ApiService);
   private readonly catalogTranslate = inject(TranslateService);
+  private readonly sharedCart = inject(PublicOrderCartService);
 
   readonly customizingProduct = signal<DeliveryCatalogProduct | null>(null);
   readonly modifierSelections = signal<Record<number, number[]>>({});
@@ -82,7 +75,7 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
   readonly comboCompositions = signal<Record<number, CatalogComboItem[]>>({});
 
   readonly catalogCart = computed(
-    () => this.cart() as unknown as CatalogCartLine[],
+    () => this.cart(),
   );
 
   override cartCount = computed(() =>
@@ -223,52 +216,14 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
   }
 
   private addCatalogLine(product: DeliveryCatalogProduct, selectedOptionIds: number[]): void {
-    const ids = [...new Set(selectedOptionIds)].sort((a, b) => a - b);
-    const key = `${product.id}:${ids.join(',')}`;
-    let delta = 0;
-    const summary: string[] = [];
-    const selected = new Set(ids);
-
-    for (const group of this.modifierGroups(product)) {
-      const names: string[] = [];
-      for (const option of group.options) {
-        if (!selected.has(option.id)) continue;
-        delta += Math.max(0, Number(option.price_delta_cents) || 0);
-        names.push(option.name);
-      }
-      if (names.length) summary.push(`${group.name}: ${names.join(', ')}`);
-    }
-
-    (this.cart as any).update((rawLines: CatalogCartLine[]) => {
-      const lines = rawLines as CatalogCartLine[];
-      const index = lines.findIndex((line) => line.key === key);
-      if (index >= 0) {
-        const next = [...lines];
-        next[index] = { ...next[index], quantity: next[index].quantity + 1 };
-        return next;
-      }
-      return [
-        ...lines,
-        {
-          key,
-          product,
-          quantity: 1,
-          selectedOptionIds: ids,
-          modifierDeltaCents: delta,
-          modifierSummary: summary,
-        },
-      ];
-    });
+    this.sharedCart.addCustomized(product, selectedOptionIds, this.modifierGroups(product));
   }
 
   setCatalogQty(key: string, quantity: number): void {
-    (this.cart as any).update((lines: CatalogCartLine[]) => {
-      if (quantity <= 0) return lines.filter((line) => line.key !== key);
-      return lines.map((line) => (line.key === key ? { ...line, quantity } : line));
-    });
+    this.sharedCart.setQuantity(key, quantity);
   }
 
-  lineUnitCents(line: CatalogCartLine): number {
+  lineUnitCents(line: PublicOrderLine): number {
     return line.product.price_cents + line.modifierDeltaCents;
   }
 
