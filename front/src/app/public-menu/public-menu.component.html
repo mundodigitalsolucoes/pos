@@ -163,7 +163,7 @@
 
               <div class="store-product-grid">
                 @for (product of featuredProducts(); track product.id) {
-                  <article class="store-product-card" [class.is-unavailable]="!product.available">
+                  <article class="store-product-card" [class.is-unavailable]="!product.available" [class.is-clickable]="product.available" (click)="product.available && openProduct(product)" (keydown.enter)="product.available && openProduct(product)" [attr.tabindex]="product.available ? 0 : null" [attr.role]="product.available ? 'button' : null" [attr.aria-label]="product.available ? product.name + ' · ' + formatPrice(product) : null">
                     <div class="store-product-copy">
                       <div class="store-product-badges">
                         <span class="store-badge store-badge-featured">★ Destaque</span>
@@ -184,18 +184,7 @@
                         </div>
                       }
                       @if (modifierGroups(product).length > 0) {
-                        <details class="store-modifier-preview">
-                          <summary>Personalizável · {{ modifierGroups(product).length }} grupo(s)</summary>
-                          @for (group of modifierGroups(product); track group.id) {
-                            <div class="store-modifier-group">
-                              <strong>{{ group.name }}</strong>
-                              <small>{{ modifierRule(group) }}</small>
-                              @for (option of group.options; track option.id) {
-                                <span>{{ option.name }} · {{ formatModifierPrice(option.price_delta_cents) }}</span>
-                              }
-                            </div>
-                          }
-                        </details>
+                        <span class="store-customizable">Personalizável</span>
                       }
                       <div class="store-product-footer">
                         <div class="store-price-stack">
@@ -208,7 +197,7 @@
                           }
                         </div>
                         @if (product.available) {
-                          <a [routerLink]="['/delivery', tenantId()]">Adicionar</a>
+                          <span class="store-add-hint">Ver produto</span>
                         } @else {
                           <span class="store-unavailable">Indisponível</span>
                         }
@@ -217,8 +206,6 @@
                     <div class="store-product-media" [class.no-image]="!product.image_url">
                       @if (product.image_url) {
                         <img [src]="productImageUrl(product.image_url)" [alt]="product.name" loading="lazy" />
-                      } @else {
-                        <span aria-hidden="true">MDS</span>
                       }
                     </div>
                   </article>
@@ -249,7 +236,7 @@
               @if (isCategoryExpanded(cat.id)) {
                 <div class="store-product-grid" [id]="categoryPanelId(cat.id)">
                   @for (product of cat.products; track product.id) {
-                    <article class="store-product-card" [class.is-unavailable]="!product.available">
+                    <article class="store-product-card" [class.is-unavailable]="!product.available" [class.is-clickable]="product.available" (click)="product.available && openProduct(product)" (keydown.enter)="product.available && openProduct(product)" [attr.tabindex]="product.available ? 0 : null" [attr.role]="product.available ? 'button' : null" [attr.aria-label]="product.available ? product.name + ' · ' + formatPrice(product) : null">
                       <div class="store-product-copy">
                         @if (isFeatured(product.id) || productLabels(product.id).length > 0) {
                           <div class="store-product-badges">
@@ -274,18 +261,7 @@
                           </div>
                         }
                         @if (modifierGroups(product).length > 0) {
-                          <details class="store-modifier-preview">
-                            <summary>Personalizável · {{ modifierGroups(product).length }} grupo(s)</summary>
-                            @for (group of modifierGroups(product); track group.id) {
-                              <div class="store-modifier-group">
-                                <strong>{{ group.name }}</strong>
-                                <small>{{ modifierRule(group) }}</small>
-                                @for (option of group.options; track option.id) {
-                                  <span>{{ option.name }} · {{ formatModifierPrice(option.price_delta_cents) }}</span>
-                                }
-                              </div>
-                            }
-                          </details>
+                          <span class="store-customizable">Personalizável</span>
                         }
                         <div class="store-product-footer">
                           <div class="store-price-stack">
@@ -298,7 +274,7 @@
                             }
                           </div>
                           @if (product.available) {
-                            <a [routerLink]="['/delivery', tenantId()]">Adicionar</a>
+                            <span class="store-add-hint">Ver produto</span>
                           } @else {
                             <span class="store-unavailable">Indisponível</span>
                           }
@@ -321,32 +297,21 @@
       </div>
 
       <aside class="store-order-sidebar" aria-label="Resumo do pedido">
-        <section class="store-delivery-card">
-          <div class="store-side-title">
-            <div class="store-side-icon" aria-hidden="true">⌖</div>
-            <div>
-              <strong>Entrega</strong>
-              <span>Taxa e prazo calculados no pedido</span>
-            </div>
-          </div>
-          <p>Informe seu endereço no fluxo de pedido para calcular a taxa e o tempo de entrega disponíveis.</p>
-          <a [routerLink]="['/delivery', tenantId()]">Calcular taxa e prazo</a>
-        </section>
-
         <section class="store-bag-card">
-          <div class="store-bag-title">
-            <div>
-              <span>Sua sacola</span>
-              <strong>0 itens</strong>
-            </div>
-            <span aria-hidden="true">🛍</span>
-          </div>
-          <div class="store-bag-empty">
-            <div aria-hidden="true">🛍</div>
-            <strong>Sua sacola está vazia</strong>
-            <p>Escolha seus produtos e personalize no fluxo de pedido.</p>
-          </div>
-          <a [routerLink]="['/delivery', tenantId()]" class="store-bag-cta">Ir para o pedido</a>
+          <div class="store-bag-title"><strong>Seu pedido</strong><span>{{ cartCount() }} itens</span></div>
+          @if (cartCount() === 0) {
+            <div class="store-bag-empty"><div aria-hidden="true">♧</div><strong>Seu pedido está vazio</strong><p>Adicione produtos para começar.</p></div>
+          } @else {
+            <ul class="store-cart-lines">
+              @for (line of cart(); track line.product.id) {
+                <li><div><strong>{{ line.product.name }}</strong><span>{{ formatCents(line.product.price_cents * line.quantity) }}</span></div>
+                  <div class="store-cart-qty"><button type="button" (click)="changeQuantity(line.product.id, line.quantity - 1)" [attr.aria-label]="'Diminuir ' + line.product.name">−</button><span>{{ line.quantity }}</span><button type="button" (click)="changeQuantity(line.product.id, line.quantity + 1)" [attr.aria-label]="'Aumentar ' + line.product.name">+</button></div>
+                </li>
+              }
+            </ul>
+            <div class="store-cart-subtotal"><span>Subtotal</span><strong>{{ formatCents(cartSubtotalCents()) }}</strong></div>
+            <a [routerLink]="['/delivery', tenantId()]" [queryParams]="{cart: '1'}" class="store-bag-cta">Continuar pedido</a>
+          }
         </section>
       </aside>
     </main>
@@ -390,12 +355,39 @@
       </div>
     </footer>
 
-    <div class="store-mobile-order-bar">
-      <a [routerLink]="['/delivery', tenantId()]">
-        <span>Ver sacola</span>
-        <strong>Fazer pedido</strong>
-      </a>
-    </div>
+    @if (cartCount() > 0) {
+      <div class="store-mobile-order-bar">
+        <a [routerLink]="['/delivery', tenantId()]" [queryParams]="{cart: '1'}">
+          <span>Ver pedido · {{ cartCount() }} itens</span>
+          <strong>{{ formatCents(cartSubtotalCents()) }}</strong>
+        </a>
+      </div>
+    }
+
+    @if (selectedProduct(); as product) {
+      <div class="store-modal-backdrop" (click)="closeProduct()">
+        <section class="store-product-modal" role="dialog" aria-modal="true" [attr.aria-label]="product.name" (click)="$event.stopPropagation()">
+          <button class="store-product-close" type="button" (click)="closeProduct()" aria-label="Fechar">×</button>
+          @if (product.image_url) {
+            <img class="store-product-modal-image" [src]="productImageUrl(product.image_url)" [alt]="product.name" />
+          }
+          <div class="store-product-modal-content">
+            <h2>{{ product.name }}</h2>
+            @if (product.description) { <p>{{ product.description }}</p> }
+            @if (modifierGroups(product).length > 0) {
+              @for (group of modifierGroups(product); track group.id) {
+                <div class="store-product-modal-group"><strong>{{ group.name }}</strong><small>{{ modifierRule(group) }}</small>
+                  @for (option of group.options; track option.id) { <span>{{ option.name }} · {{ formatModifierPrice(option.price_delta_cents) }}</span> }
+                </div>
+              }
+              <p>Este produto requer personalização. A finalização online ainda não aceita essas escolhas; consulte o restaurante.</p>
+            } @else {
+              <button type="button" class="store-bag-cta" (click)="addSelectedProduct()">Adicionar ao pedido · {{ formatPrice(product) }}</button>
+            }
+          </div>
+        </section>
+      </div>
+    }
 
     @if (infoOpen()) {
       <div class="store-modal-backdrop" (click)="closeInfo()">
