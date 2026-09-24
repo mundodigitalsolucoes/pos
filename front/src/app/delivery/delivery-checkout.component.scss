@@ -1,6 +1,20 @@
 .delivery-checkout-page {
   min-height: 100vh;
+  background: #f7f5ef;
+  color: #2f3453;
 }
+
+.delivery-checkout-page .hero-header { min-height: 10rem; max-height: 14rem; }
+.delivery-checkout-page .hero-content { padding-top: 1rem; padding-bottom: 1rem; }
+.delivery-checkout-page .restaurant-name { font-size: clamp(1.35rem, 3vw, 2rem); }
+.delivery-checkout-page .delivery-content { max-width: 58rem; margin: 0 auto; }
+.delivery-checkout-page .delivery-category,
+.delivery-checkout-page .delivery-cart-list,
+.delivery-checkout-page .delivery-form { background: #fff; border: 1px solid #e5e7ed; border-radius: 0.65rem; padding: 1rem; }
+.delivery-checkout-page .delivery-product:last-child { border-bottom: 0; }
+.delivery-checkout-page .delivery-product-image { width: 5rem; height: 5rem; }
+.delivery-checkout-page .btn-primary { background: #374b89; border-color: #374b89; }
+.delivery-checkout-page .btn-primary:hover { background: #2f3453; }
 
 .delivery-shell {
   min-height: 60vh;
