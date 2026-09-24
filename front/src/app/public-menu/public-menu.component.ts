@@ -80,6 +80,8 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   cartCount = this.orderCart.count;
   cartSubtotalCents = this.orderCart.subtotalCents;
   selectedProduct = signal<PublicTenantMenuProduct | null>(null);
+  selectedModifiers = signal<Record<number, number[]>>({});
+  customizationError = signal<string | null>(null);
 
   tenantId = signal(0);
   tenant = signal<TenantSummary | null>(null);
@@ -264,16 +266,56 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     document.getElementById(`cat-${categoryId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  openProduct(product: PublicTenantMenuProduct): void { this.selectedProduct.set(product); }
+  openProduct(product: PublicTenantMenuProduct): void {
+    this.selectedModifiers.set({});
+    this.customizationError.set(null);
+    this.selectedProduct.set(product);
+  }
   closeProduct(): void { this.selectedProduct.set(null); }
+  isModifierSelected(groupId: number, optionId: number): boolean {
+    return (this.selectedModifiers()[groupId] ?? []).includes(optionId);
+  }
+  toggleModifier(group: PublicModifierGroup, optionId: number): void {
+    const current = this.selectedModifiers();
+    const selected = [...(current[group.id] ?? [])];
+    const index = selected.indexOf(optionId);
+    if (index >= 0) selected.splice(index, 1);
+    else if (group.max_select <= 1) selected.splice(0, selected.length, optionId);
+    else if (selected.length < group.max_select) selected.push(optionId);
+    else {
+      this.customizationError.set(`Escolha no máximo ${group.max_select} opção(ões) em ${group.name}.`);
+      return;
+    }
+    this.customizationError.set(null);
+    this.selectedModifiers.set({ ...current, [group.id]: selected });
+  }
+  selectedPriceCents(product: PublicTenantMenuProduct): number {
+    let cents = product.price_cents;
+    for (const group of this.modifierGroups(product)) {
+      for (const option of group.options) {
+        if (this.isModifierSelected(group.id, option.id)) cents += option.price_delta_cents;
+      }
+    }
+    return cents;
+  }
   addSelectedProduct(): void {
     const product = this.selectedProduct();
-    if (!product || this.modifierGroups(product).length > 0) return;
-    this.orderCart.add(product);
+    if (!product) return;
+    const ids: number[] = [];
+    for (const group of this.modifierGroups(product)) {
+      const selected = this.selectedModifiers()[group.id] ?? [];
+      const min = group.is_required ? Math.max(1, group.min_select) : Math.max(0, group.min_select);
+      if (selected.length < min || selected.length > group.max_select) {
+        this.customizationError.set(`Escolha de ${min} a ${group.max_select} opção(ões) em ${group.name}.`);
+        return;
+      }
+      ids.push(...selected);
+    }
+    this.orderCart.addCustomized(product, ids, this.modifierGroups(product));
     this.closeProduct();
   }
-  changeQuantity(productId: number, quantity: number): void {
-    this.orderCart.setQuantity(productId, quantity);
+  changeQuantity(key: string, quantity: number): void {
+    this.orderCart.setQuantity(key, quantity);
   }
   formatCents(cents: number): string {
     const currency = this.currencyLabel() || 'EUR';
