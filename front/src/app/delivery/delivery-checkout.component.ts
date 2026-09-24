@@ -288,7 +288,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   }
 
   setQty(productId: number, quantity: number): void {
-    this.orderCart.setQuantity(productId, quantity);
+    this.orderCart.setQuantity(`${productId}:`, quantity);
   }
 
   goToCart(): void {
