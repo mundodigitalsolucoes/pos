@@ -1,13 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { environment } from '../../environments/environment';
-import { ApiService, PublicTenantMenuProduct } from '../services/api.service';
+import { PublicTenantMenuProduct } from '../services/api.service';
 import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LegalLinksComponent } from '../shared/legal-links.component';
-import { contactPhoneValid } from '../shared/contact-validators';
 import { DeliveryCheckoutComponent } from './delivery-checkout.component';
 import { PublicOrderCartService, PublicOrderLine } from '../services/public-order-cart.service';
 
@@ -42,16 +41,6 @@ type DeliveryCatalogProduct = PublicTenantMenuProduct & {
   modifier_groups?: CatalogModifierGroup[];
 };
 
-interface CatalogCheckoutResponse {
-  id: number;
-  public_order_token: string;
-  total_cents: number;
-  subtotal_cents?: number;
-  delivery_fee_cents?: number;
-  revolut_configured?: boolean;
-  stripe_publishable_key?: string | null;
-}
-
 @Component({
   selector: 'app-delivery-catalog-checkout',
   standalone: true,
@@ -65,8 +54,6 @@ interface CatalogCheckoutResponse {
 })
 export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent {
   private readonly catalogHttp = inject(HttpClient);
-  private readonly catalogApi = inject(ApiService);
-  private readonly catalogTranslate = inject(TranslateService);
   private readonly sharedCart = inject(PublicOrderCartService);
 
   readonly customizingProduct = signal<DeliveryCatalogProduct | null>(null);
@@ -74,26 +61,7 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
   readonly customizationError = signal<string | null>(null);
   readonly comboCompositions = signal<Record<number, CatalogComboItem[]>>({});
 
-  readonly catalogCart = computed(
-    () => this.cart(),
-  );
-
-  override cartCount = computed(() =>
-    this.catalogCart().reduce((total, line) => total + line.quantity, 0),
-  );
-
-  override cartSubtotalCents = computed(() =>
-    this.catalogCart().reduce(
-      (total, line) =>
-        total + (line.product.price_cents + line.modifierDeltaCents) * line.quantity,
-      0,
-    ),
-  );
-
-  override cartTotalCents = computed(() => {
-    const fee = this.deliveryConfig()?.delivery_fee_cents ?? 0;
-    return this.cartSubtotalCents() + Math.max(0, fee);
-  });
+  readonly catalogCart = this.cart;
 
   override ngOnInit(): void {
     super.ngOnInit();
@@ -227,89 +195,4 @@ export class DeliveryCatalogCheckoutComponent extends DeliveryCheckoutComponent 
     return line.product.price_cents + line.modifierDeltaCents;
   }
 
-  override submitAddress(): void {
-    this.formError.set(null);
-    const address = this.deliveryAddress.trim();
-    const phone = this.customerPhone.trim();
-    const cfg = this.deliveryConfig();
-
-    if (!address) {
-      this.formError.set(this.catalogTranslate.instant('DELIVERY_CHECKOUT.ADDRESS_REQUIRED'));
-      return;
-    }
-    if (!phone || !contactPhoneValid(phone)) {
-      this.formError.set(this.catalogTranslate.instant('DELIVERY_CHECKOUT.PHONE_INVALID'));
-      return;
-    }
-    if (cfg?.postal_codes_required && !this.postalCode.trim()) {
-      this.formError.set(this.catalogTranslate.instant('DELIVERY_CHECKOUT.POSTAL_REQUIRED'));
-      return;
-    }
-    if (cfg?.delivery_radius_meters && (this.deliveryLat() == null || this.deliveryLng() == null)) {
-      this.formError.set(this.catalogTranslate.instant('DELIVERY_CHECKOUT.LOCATION_REQUIRED'));
-      this.requestDeliveryLocation();
-      return;
-    }
-    if (this.cartCount() < 1) {
-      this.formError.set(this.catalogTranslate.instant('DELIVERY_CHECKOUT.CART_EMPTY'));
-      return;
-    }
-
-    const base = (environment.apiUrl || '').replace(/\/$/, '');
-    this.submitting.set(true);
-    this.catalogHttp
-      .post<CatalogCheckoutResponse>(
-        `${base}/tenant/subcategories/public/catalog-checkout/${this.tenantId()}`,
-        {
-          items: this.catalogCart().map((line) => ({
-            product_id: line.product.id,
-            quantity: line.quantity,
-            customization_answers: {
-              catalog_modifier_option_ids: line.selectedOptionIds,
-            },
-          })),
-          delivery_address: address,
-          customer_phone: phone,
-          customer_name: this.customerName.trim() || null,
-          notes: this.deliveryNotes.trim() || null,
-          postal_code: this.postalCode.trim() || null,
-          delivery_latitude: this.deliveryLat(),
-          delivery_longitude: this.deliveryLng(),
-        },
-      )
-      .subscribe({
-        next: (res) => {
-          this.submitting.set(false);
-          this.orderId.set(res.id);
-          this.publicOrderToken.set(res.public_order_token);
-          this.totalCents.set(res.total_cents);
-          this.subtotalCents.set(res.subtotal_cents ?? res.total_cents);
-          this.deliveryFeeCents.set(res.delivery_fee_cents ?? 0);
-          this.revolutConfigured.set(!!res.revolut_configured);
-          const key = res.stripe_publishable_key || environment.stripePublishableKey || '';
-          this.catalogApi.setTenantStripeKey(res.stripe_publishable_key || null);
-          this.stripeReady.set(!!key);
-          this.step.set('pay');
-        },
-        error: (err) => {
-          this.submitting.set(false);
-          const detail = err.error?.detail;
-          let message = this.catalogTranslate.instant('DELIVERY_CHECKOUT.CREATE_FAILED');
-          if (typeof detail === 'string') {
-            if (detail.includes('outside the delivery zone')) {
-              message = this.catalogTranslate.instant('DELIVERY_CHECKOUT.OUTSIDE_ZONE');
-            } else if (detail.includes('outside the delivery radius')) {
-              message = this.catalogTranslate.instant('DELIVERY_CHECKOUT.OUTSIDE_RADIUS');
-            } else if (detail.includes('postal_code')) {
-              message = this.catalogTranslate.instant('DELIVERY_CHECKOUT.POSTAL_REQUIRED');
-            } else if (detail.toLowerCase().includes('location')) {
-              message = this.catalogTranslate.instant('DELIVERY_CHECKOUT.LOCATION_REQUIRED');
-            } else {
-              message = detail;
-            }
-          }
-          this.formError.set(message);
-        },
-      });
-  }
 }

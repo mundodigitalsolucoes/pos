@@ -144,18 +144,18 @@
           </button>
         } @else {
           <ul class="delivery-cart-list">
-            @for (line of cart(); track line.product.id) {
+            @for (line of cart(); track line.key) {
               <li class="delivery-cart-row">
                 <div>
                   <strong>{{ line.product.name }}</strong>
                   <span class="delivery-cart-line-price">{{
-                    formatCents(line.product.price_cents * line.quantity)
+                    formatCents((line.product.price_cents + line.modifierDeltaCents) * line.quantity)
                   }}</span>
                 </div>
                 <div class="delivery-qty">
-                  <button type="button" (click)="setQty(line.product.id, line.quantity - 1)">−</button>
+                  <button type="button" (click)="setQty(line.key, line.quantity - 1)">−</button>
                   <span>{{ line.quantity }}</span>
-                  <button type="button" (click)="setQty(line.product.id, line.quantity + 1)">+</button>
+                  <button type="button" (click)="setQty(line.key, line.quantity + 1)">+</button>
                 </div>
               </li>
             }

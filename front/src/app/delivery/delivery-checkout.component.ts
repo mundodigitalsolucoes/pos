@@ -94,9 +94,8 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
 
   cartCount = this.orderCart.count;
   cartTotalCents = computed(() => {
-    const items = this.cart().reduce((sum, l) => sum + l.product.price_cents * l.quantity, 0);
     const fee = this.deliveryConfig()?.delivery_fee_cents ?? 0;
-    return items + (fee > 0 ? fee : 0);
+    return this.cartSubtotalCents() + Math.max(0, fee);
   });
   cartSubtotalCents = this.orderCart.subtotalCents;
 
@@ -133,9 +132,6 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     }
     this.tenantId.set(tid);
     this.orderCart.useTenant(tid);
-    if (this.cartCount() > 0 && this.route.snapshot.queryParamMap.get('cart') === '1') {
-      this.step.set('cart');
-    }
     this.updateDocumentTitle();
 
     this.api.getPublicTenant(tid).subscribe({
@@ -196,6 +192,8 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     this.api.getPublicTenantMenu(tenantId).subscribe({
       next: (data) => {
         this.menu.set(data);
+        this.orderCart.reconcile(tenantId, data);
+        if (this.cartCount() > 0 && this.route.snapshot.queryParamMap.get('cart') === '1') this.step.set('cart');
         this.menuLoading.set(false);
         this.loading.set(false);
         this.updateDocumentTitle();
@@ -216,6 +214,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     this.api.getPublicTenantMenu(tid).subscribe({
       next: (data) => {
         this.menu.set(data);
+        this.orderCart.reconcile(tid, data);
         this.menuLoading.set(false);
       },
       error: () => this.menuLoading.set(false),
@@ -287,8 +286,8 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     this.orderCart.add(product);
   }
 
-  setQty(productId: number, quantity: number): void {
-    this.orderCart.setQuantity(`${productId}:`, quantity);
+  setQty(key: string, quantity: number): void {
+    this.orderCart.setQuantity(key, quantity);
   }
 
   goToCart(): void {
@@ -318,7 +317,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     this.customerPhone = '';
     this.deliveryAddress = '';
     this.deliveryNotes = '';
-    this.cart.set([]);
+    this.orderCart.clear();
     this.step.set('menu');
   }
 
@@ -351,10 +350,11 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
 
     this.submitting.set(true);
     this.api
-      .createPublicSatisfechoDeliveryOrder(this.tenantId(), {
+      .createPublicCatalogCheckout(this.tenantId(), {
         items: this.cart().map((l) => ({
           product_id: l.product.id,
           quantity: l.quantity,
+          customization_answers: { catalog_modifier_option_ids: l.selectedOptionIds },
         })),
         delivery_address: address,
         customer_phone: phone,
@@ -524,7 +524,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
         next: () => {
           this.processingPayment.set(false);
           this.paymentSuccess.set(true);
-          this.cart.set([]);
+          this.orderCart.clear();
           this.step.set('success');
         },
         error: () => {

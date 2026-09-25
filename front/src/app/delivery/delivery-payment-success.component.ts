@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../services/api.service';
+import { PublicOrderCartService } from '../services/public-order-cart.service';
 
 @Component({
   selector: 'app-delivery-payment-success',
@@ -60,6 +61,7 @@ import { ApiService } from '../services/api.service';
 export class DeliveryPaymentSuccessComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  private cart = inject(PublicOrderCartService);
 
   loading = signal(true);
   error = signal(false);
@@ -80,6 +82,7 @@ export class DeliveryPaymentSuccessComponent implements OnInit {
       return;
     }
     this.tenantId.set(tid);
+    this.cart.useTenant(tid);
     this.publicToken.set(publicToken);
     const orderIdNum = parseInt(orderId, 10);
     if (Number.isNaN(orderIdNum)) {
@@ -90,7 +93,10 @@ export class DeliveryPaymentSuccessComponent implements OnInit {
     }
     this.orderId.set(orderIdNum);
     this.api.confirmRevolutPayment(orderIdNum, null, publicToken).subscribe({
-      next: () => this.loading.set(false),
+      next: () => {
+        this.cart.clear();
+        this.loading.set(false);
+      },
       error: (err) => {
         this.error.set(true);
         this.errorMessage.set(err.error?.detail || 'Payment confirmation failed.');

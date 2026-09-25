@@ -153,6 +153,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     this.api.getPublicTenantMenu(tenantId).subscribe({
       next: (data) => {
         this.menu.set(data);
+        this.orderCart.reconcile(tenantId, data);
         this.menuLoading.set(false);
         this.loading.set(false);
         this.updateDocumentTitle();
@@ -210,6 +211,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     this.api.getPublicTenantMenu(tid).subscribe({
       next: (data) => {
         this.menu.set(data);
+        this.orderCart.reconcile(tid, data);
         this.menuLoading.set(false);
       },
       error: () => this.menuLoading.set(false),
