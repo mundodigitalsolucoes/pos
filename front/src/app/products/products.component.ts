@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService, KitchenStation, Product, ProductBulkImportConfirmResult, ProductQuestionStaff, Tax } from '../services/api.service';
 import { PermissionService } from '../services/permission.service';
 import { SidebarComponent } from '../shared/sidebar.component';
@@ -20,6 +20,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
   imports: [
     FormsModule,
     SidebarComponent,
+    RouterLink,
     CommonModule,
     TranslateModule,
     CategoriesComponent,
@@ -29,7 +30,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
   template: `
     <app-sidebar>
         <div class="page-header">
-           <h1>{{ 'PRODUCTS.TITLE' | translate }}</h1>
+           <h1>Catálogo</h1>
            @if (activeTab() === 'products' && !showAddForm() && !editingProduct() && canEditProducts()) {
              <div class="page-header-actions">
              <button type="button" class="btn btn-secondary" (click)="openBulkImport()">
@@ -50,7 +51,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
            }
          </div>
 
-        <!-- Main Tab Navigation (Button Style like Settings) -->
+        <!-- Navegação entre recursos reais do catálogo. -->
         <div class="main-tabs-container">
           <div class="main-tabs">
             <button 
@@ -66,6 +67,10 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
               </svg>
               <span>{{ 'NAV.PRODUCTS' | translate }}</span>
             </button>
+            @if (canManageCatalog()) {
+              <a class="main-tab" routerLink="/cardapio/complementos">Complementos</a>
+              <a class="main-tab" routerLink="/cardapio/complementos" [queryParams]="{view:'options'}">Opções</a>
+            }
             
             <button 
               type="button" 
@@ -273,6 +278,9 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                          <button type="button" class="btn btn-secondary" (click)="fileInput.click()" [disabled]="uploading()">
                            {{ uploading() ? ('PRODUCTS.UPLOADING' | translate) : (pendingImageFile() ? ('PRODUCTS.CHANGE_IMAGE' | translate) : ('PRODUCTS.UPLOAD_IMAGE' | translate)) }}
                          </button>
+                         @if (editingProduct()?.id && editingProduct()?.image_filename) {
+                           <button type="button" class="btn btn-secondary" (click)="removeImage()" [disabled]="uploading()">Remover imagem</button>
+                         }
                          @if (pendingImageFile()) {
                            <span class="pending-file-name">{{ pendingImageFile()?.name }}</span>
                          }
@@ -285,6 +293,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                      <div class="form-group product-questions-section">
                        <label>{{ 'PRODUCTS.CUSTOMIZATIONS_TITLE' | translate }}</label>
                        <p class="field-hint">{{ 'PRODUCTS.CUSTOMIZATIONS_HINT' | translate }}</p>
+                       @if (canManageCatalog()) { <a routerLink="/cardapio/complementos" class="modifier-shortcut">Gerenciar grupos, opções e vínculos com produtos →</a> }
                        @if (questionsLoading()) {
                          <p class="questions-loading">{{ 'PRODUCTS.QUESTIONS_LOADING' | translate }}</p>
                        } @else if (questionEditorMode() === null) {
@@ -423,6 +432,16 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                }
                </div>
             } @else {
+              <div class="catalog-workspace">
+                <aside class="catalog-categories" aria-label="Categorias">
+                  <div class="category-heading"><strong>Categorias</strong>@if (canManageCatalog()) { <a routerLink="/cardapio/categorias" title="Gerenciar categorias" aria-label="Gerenciar categorias">+</a> }</div>
+                  <button type="button" [class.selected]="selectedCategory() === null" (click)="selectCategory(null)">Todas <span>{{ products().length }}</span></button>
+                  @for (category of getCategoryKeys(); track category) {
+                    <button type="button" [class.selected]="selectedCategory() === category" (click)="selectCategory(category)">{{ getCategoryLabel(category) }} <span>{{ countByCategory(category) }}</span></button>
+                  }
+                </aside>
+                <div class="catalog-products">
+                  <div class="catalog-section-heading"><h2>{{ selectedCategory() ? getCategoryLabel(selectedCategory()!) : 'Todos os produtos' }}</h2><small>{{ filteredProducts().length }} produto(s)</small></div>
               <!-- Search -->
               <div class="search-row">
                 <label for="products-search" class="visually-hidden">{{ 'PRODUCTS.SEARCH_PLACEHOLDER' | translate }}</label>
@@ -436,29 +455,8 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                   autocomplete="off"
                 />
               </div>
-              <!-- Category Filters (Ribbon Style) -->
+              <!-- Subcategorias da categoria selecionada -->
               <div class="filters-section">
-                @if (availableCategories().length > 0) {
-                  <div class="ribbon-container">
-                    <div class="ribbon">
-                      <button 
-                        class="ribbon-tab" 
-                        [class.active]="selectedCategory() === null"
-                        (click)="selectCategory(null)">
-                        {{ 'CATALOG.ALL_CATEGORIES' | translate }}
-                      </button>
-                      @for (category of availableCategories(); track category) {
-                        <button 
-                          class="ribbon-tab" 
-                          [class.active]="selectedCategory() === category"
-                          (click)="selectCategory(category)">
-                          {{ getCategoryLabel(category) }}
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
-                
                 <!-- Subcategory Filters (Ribbon Style - Smaller) -->
                 @if (selectedCategory() && availableSubcategoriesForFilter().length > 0) {
                   <div class="ribbon-container subribbon">
@@ -492,6 +490,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                        <th>{{ 'PRODUCTS.CATEGORY_HEADER' | translate }}</th>
                        <th>{{ 'PRODUCTS.SUBCATEGORY_HEADER' | translate }}</th>
                        <th>{{ 'PRODUCTS.PRICE_HEADER' | translate }}</th>
+                       <th>Disponibilidade</th>
                        <th>{{ 'PRODUCTS.COST_HEADER' | translate }}</th>
                        <th>{{ 'PRODUCTS.STOCK_HEADER' | translate }}</th>
                        <th></th>
@@ -564,6 +563,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                           }
                         </td>
                         <td class="price">{{ formatPrice(product.price_cents) }}</td>
+                        <td><span class="availability" [class.unavailable]="!productAvailable(product)">{{ productAvailable(product) ? 'Disponível' : 'Fora do período' }}</span></td>
                         <td class="price">{{ product.cost_cents != null ? formatPrice(product.cost_cents) : '—' }}</td>
                         <td data-testid="product-stock-cell">
                           @if (product.stock_alert_enabled) {
@@ -606,6 +606,7 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
                 </table>
                 </div>
               </div>
+              </div></div>
             }
             }
           }
@@ -663,6 +664,22 @@ export class ProductsComponent implements OnInit {
   private translate = inject(TranslateService);
 
   canEditProducts = computed(() => this.permissions.hasPermission(this.permissions.getCurrentUser(), 'product:write'));
+  canManageCatalog = computed(() => this.permissions.isAdmin(this.permissions.getCurrentUser()));
+  countByCategory(category: string): number { return this.products().filter(product => product.category === category).length; }
+  productAvailable(product: Product): boolean {
+    const now = new Date();
+    const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+    return (!product.available_from || product.available_from.slice(0, 10) <= today) && (!product.available_until || product.available_until.slice(0, 10) >= today);
+  }
+  removeImage(): void {
+    const product = this.editingProduct();
+    if (!product?.id || !this.canEditProducts()) return;
+    this.uploading.set(true);
+    this.api.removeProductImage(product.id).subscribe({
+      next: updated => { this.editingProduct.set(updated); this.products.update(list => list.map(p => p.id === updated.id ? updated : p)); this.uploading.set(false); },
+      error: () => { this.error.set('Não foi possível remover a imagem.'); this.uploading.set(false); },
+    });
+  }
 
   activeTab = signal<'products' | 'categories'>('products');
   products = signal<Product[]>([]);

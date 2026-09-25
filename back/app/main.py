@@ -5821,6 +5821,36 @@ async def upload_product_image(
     return JSONResponse(content=product_dict, status_code=status.HTTP_200_OK)
 
 
+@app.delete("/products/{product_id}/image")
+@limiter.limit(
+    f"{getattr(settings, 'rate_limit_admin_per_minute', 30)}/minute",
+    key_func=_rate_limit_key_user,
+)
+def remove_product_image(
+    request: Request,
+    product_id: int,
+    current_user: Annotated[models.User, Depends(require_permission(Permission.PRODUCT_WRITE))],
+    session: Session = Depends(get_session),
+) -> models.Product:
+    """Clear only this tenant's product image; provider files remain shared."""
+    product = session.exec(
+        select(models.Product).where(
+            models.Product.id == product_id,
+            models.Product.tenant_id == current_user.tenant_id,
+        )
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    old_filename = product.image_filename
+    product.image_filename = None
+    session.add(product)
+    session.commit()
+    session.refresh(product)
+    if old_filename and not old_filename.replace("\\", "/").startswith("providers/"):
+        _delete_product_image_on_disk(old_filename, current_user.tenant_id)
+    return product
+
+
 @app.get("/products/{product_id}/questions")
 @limiter.limit(
     f"{getattr(settings, 'rate_limit_admin_per_minute', 30)}/minute",

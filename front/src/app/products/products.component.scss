@@ -4,6 +4,22 @@
 // Uses shared modules from styles/*.scss for buttons, forms, tables, modals
 @use '../../styles/breakpoints' as *;
 
+.catalog-workspace { display: grid; grid-template-columns: 220px minmax(0, 1fr); border: 1px solid #dfe2e9; border-radius: 7px; overflow: hidden; background: #fff; min-height: 420px; }
+.catalog-categories { border-right: 1px solid #dfe2e9; background: #fff; }
+.category-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #e6e8ed; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: #2F3453; }
+.category-heading a { text-decoration: none; font-size: 1.2rem; color: #374B89; line-height: 1; }
+.catalog-categories button { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; padding: 12px; border: 0; border-bottom: 1px solid #eff0f4; background: #fff; color: #424a63; font-size: .79rem; text-align: left; cursor: pointer; }
+.catalog-categories button:hover, .catalog-categories button.selected { background: #f0f2f9; color: #374B89; }
+.catalog-categories button.selected { box-shadow: inset 3px 0 #D6A92F; font-weight: 700; }
+.catalog-categories button span { color: #858ca0; }
+.catalog-products { min-width: 0; padding: 14px; }
+.catalog-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; color: #2F3453; }
+.catalog-section-heading h2 { margin: 0; font-size: 1rem; }
+.catalog-section-heading small { color: #747c92; white-space: nowrap; }
+.catalog-products .table-card { box-shadow: none; border-radius: 5px; }
+.availability{font-size:.7rem;color:#237a4b;font-weight:700}.availability.unavailable{color:#9b6b1b}.modifier-shortcut{display:inline-block;margin-bottom:10px;color:#374B89;font-size:.8rem;font-weight:700}
+@media (max-width: 700px) { .catalog-workspace { display: block; }.catalog-categories { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid #dfe2e9; }.category-heading { position: sticky; left: 0; min-width: 100px; background: #fff; }.catalog-categories button { width: auto; min-width: max-content; border-right: 1px solid #eff0f4; border-bottom: 0; }.catalog-products { padding: 10px; } }
+
 // Component-specific styles only - common patterns use global classes
 
 // Page header action group

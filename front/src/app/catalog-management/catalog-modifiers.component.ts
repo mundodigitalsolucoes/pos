@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SidebarComponent } from '../shared/sidebar.component';
 
 interface ProductRow { id?: number; name: string; category?: string; }
@@ -19,12 +19,19 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
         <header class="page-head">
           <div>
             <p class="eyebrow">Cardápio</p>
-            <h1>Complementos e opções</h1>
+            <h1>Catálogo</h1>
             <p>Crie grupos reutilizáveis, defina regras de escolha e associe o mesmo grupo a vários produtos.</p>
           </div>
           <a routerLink="/products" class="btn secondary">Voltar ao Cardápio</a>
         </header>
 
+        <nav class="catalog-tabs" aria-label="Seções do catálogo">
+          <a routerLink="/products">Produtos</a>
+          <a routerLink="/cardapio/complementos" [class.active]="view() === 'groups'">Complementos</a>
+          <a routerLink="/cardapio/complementos" [queryParams]="{view:'options'}" [class.active]="view() === 'options'">Opções</a>
+        </nav>
+
+        @if (view() === 'groups') {
         <section class="create-card">
           <div>
             <h2>Novo grupo de complementos</h2>
@@ -38,6 +45,7 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
             <button type="button" class="btn primary" (click)="createGroup()" [disabled]="saving() || !newGroupName.trim()">+ Criar grupo</button>
           </div>
         </section>
+        }
 
         @if (error()) { <div class="message error">{{ error() }}</div> }
         @if (loading()) {
@@ -48,7 +56,7 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
           <section class="groups">
             @for (group of groups(); track group.id) {
               <article class="group-card" [class.inactive]="!group.is_active">
-                <div class="group-head">
+                @if (view() === 'groups') { <div class="group-head">
                   <div>
                     <div class="title-row">
                       <input class="group-name" [(ngModel)]="group.name" maxlength="128" />
@@ -64,7 +72,7 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
                     <button class="btn secondary" type="button" (click)="saveGroup(group)" [disabled]="saving()">Salvar regras</button>
                     <button class="text danger" type="button" (click)="deleteGroup(group)" [disabled]="saving()">Excluir</button>
                   </div>
-                </div>
+                </div> } @else { <div class="section-head"><h2>{{ group.name }}</h2><span>{{ group.options.length }} opções</span></div> }
 
                 <div class="columns">
                   <section>
@@ -91,7 +99,7 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
                     }
                   </section>
 
-                  <section>
+                  @if (view() === 'groups') { <section>
                     <div class="section-head"><h3>Produtos vinculados</h3><span>{{ group.product_ids.length }}</span></div>
                     <p class="muted">Marque os produtos que reutilizam este grupo.</p>
                     <div class="product-list">
@@ -105,7 +113,7 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
                       }
                     </div>
                     <button type="button" class="btn secondary save-products" (click)="saveProducts(group)" [disabled]="saving()">Salvar vínculos</button>
-                  </section>
+                  </section> }
                 </div>
               </article>
             }
@@ -115,11 +123,15 @@ interface ModifierGroup { id: number; name: string; min_select: number; max_sele
     </app-sidebar>
   `,
   styles: [`
+    .catalog-tabs{display:flex;gap:18px;border-bottom:1px solid #dfe2e9;margin-bottom:16px}.catalog-tabs a{padding:10px 2px;color:#697187;text-decoration:none;font-weight:700;font-size:.83rem}.catalog-tabs a.active{color:#374B89;border-bottom:2px solid #D6A92F}
+    .group-card:has(.section-head h2) .columns{grid-template-columns:1fr}.group-card:has(.section-head h2) .option-row{grid-template-columns:minmax(140px,1fr) 120px 80px auto auto}
     .page{max-width:1240px;margin:0 auto;padding:2rem}.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem}.eyebrow{margin:0 0 .25rem;color:#D6A92F;font-size:.76rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}h1{margin:0;color:#2F3453;font-size:clamp(1.9rem,4vw,2.4rem)}.page-head p:last-child,.create-card p,.muted{color:#667085}.create-card,.group-card{background:#fff;border:1px solid rgba(47,52,83,.12);border-radius:16px;box-shadow:0 10px 28px rgba(47,52,83,.05)}.create-card{padding:1.1rem 1.25rem;margin-bottom:1rem}.create-card h2,.section-head h3{margin:0;color:#2F3453}.create-grid{display:grid;grid-template-columns:minmax(220px,1fr) 110px 110px 130px auto;gap:.6rem;align-items:end;margin-top:1rem}input{min-height:40px;border:1px solid #d7dbe6;border-radius:9px;padding:.55rem .65rem;font:inherit;box-sizing:border-box}label{font-size:.82rem;color:#475467;display:flex;flex-direction:column;gap:.25rem}.check,.status{flex-direction:row;align-items:center;gap:.45rem;min-height:40px}.check input,.status input,.product-check input{min-height:auto}.btn{min-height:40px;padding:.58rem .85rem;border-radius:9px;font:inherit;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:#374B89;color:#fff;border:1px solid #374B89}.btn.secondary,.btn.compact{background:#fff;color:#374B89;border:1px solid rgba(55,75,137,.35)}.btn.compact{min-height:36px}.groups{display:grid;gap:1rem}.group-card{padding:1.1rem}.group-card.inactive{opacity:.68}.group-head{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid rgba(47,52,83,.1);padding-bottom:1rem}.title-row,.rules,.actions,.section-head,.new-option,.option-row{display:flex;align-items:center;gap:.6rem}.group-name{font-size:1.05rem;font-weight:800;color:#2F3453;min-width:280px}.rules{margin-top:.65rem}.rules label{width:110px}.actions{align-self:flex-start}.text{border:0;background:transparent;color:#374B89;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer}.text.danger{color:#b42318}.columns{display:grid;grid-template-columns:1.1fr .9fr;gap:1.25rem;padding-top:1rem}.section-head{justify-content:space-between}.section-head span{background:#f2f4f7;color:#475467;border-radius:999px;padding:.25rem .5rem;font-size:.76rem;font-weight:700}.new-option{margin:.75rem 0}.new-option input:first-child{flex:1}.new-option input:nth-child(2){width:110px}.option-list{display:grid;gap:.5rem}.option-row{display:grid;grid-template-columns:minmax(140px,1fr) 120px 80px auto auto}.money{display:flex;align-items:center;border:1px solid #d7dbe6;border-radius:9px;padding-left:.45rem}.money input{border:0;width:86px}.status.small{font-size:.76rem}.product-list{max-height:280px;overflow:auto;border:1px solid #eaecf0;border-radius:10px;margin-top:.6rem}.product-check{display:flex;flex-direction:row;align-items:center;padding:.65rem .75rem;border-bottom:1px solid #f2f4f7}.product-check:last-child{border-bottom:0}.product-check span{display:flex;flex-direction:column}.product-check small{color:#98a2b3}.save-products{margin-top:.75rem}.message{padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem}.message.error{background:#fff1f0;color:#b42318;border:1px solid #ffd0cc}.empty{padding:2rem;text-align:center;color:#667085;background:#fff;border:1px dashed #d0d5dd;border-radius:14px;display:flex;flex-direction:column;gap:.3rem}
     @media(max-width:900px){.create-grid{grid-template-columns:1fr 1fr}.create-grid>input:first-child,.create-grid>.btn{grid-column:1/-1}.columns{grid-template-columns:1fr}.group-head{flex-direction:column}.actions{align-self:stretch}.option-row{grid-template-columns:1fr 120px}.option-row .status,.option-row .text{justify-self:start}.page{padding:1rem}.page-head{flex-direction:column}.group-name{min-width:0;width:100%}.title-row{align-items:stretch;flex-direction:column}}
   `]
 })
 export class CatalogModifiersComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  readonly view = signal<'groups' | 'options'>('groups');
   private readonly http = inject(HttpClient);
   private readonly apiBase = String((window as Window & { __API_URL__?: string }).__API_URL__ || '/api').replace(/\/$/, '');
   readonly groups = signal<ModifierGroup[]>([]);
@@ -129,7 +141,7 @@ export class CatalogModifiersComponent implements OnInit {
   readonly error = signal<string | null>(null);
   newGroupName=''; newMin=0; newMax=1; newRequired=false;
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void { this.route.queryParamMap.subscribe(params => this.view.set(params.get('view') === 'options' ? 'options' : 'groups')); this.load(); }
   private endpoint(s=''){ return `${this.apiBase}/tenant/subcategories/modifier-groups${s}`; }
   load(): void {
     this.loading.set(true); this.error.set(null);
