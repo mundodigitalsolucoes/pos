@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { SidebarComponent } from '../shared/sidebar.component';
+import { SalesOverviewComponent } from './sales-overview.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { PermissionService } from '../services/permission.service';
 import {
@@ -15,12 +16,14 @@ import {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, RouterLink, TranslateModule],
+  imports: [CommonModule, SidebarComponent, RouterLink, TranslateModule, SalesOverviewComponent],
   template: `
     <app-sidebar>
         <div class="page-header">
           <h1>{{ 'DASHBOARD.TITLE' | translate }}</h1>
         </div>
+
+        @if (canShowAdminSections()) { <app-sales-overview /> }
 
         <div class="welcome-section">
           <h2>{{ 'DASHBOARD.WELCOME_BACK' | translate }}</h2>
@@ -261,10 +264,10 @@ import {
     }
 
     .welcome-section {
-      margin-bottom: var(--space-6);
+      margin-bottom: 12px;
 
       h2 {
-        font-size: 1.75rem;
+        font-size: 1.1rem;
         font-weight: 600;
         color: var(--color-text);
         margin-bottom: var(--space-2);
@@ -286,37 +289,36 @@ import {
 
     .quick-actions {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Increased from 200px */
-      gap: var(--space-4);
+      grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+      gap: 10px;
     }
 
     .action-card {
       display: flex;
       flex-direction: column;
-      padding: var(--space-5);
+      padding: 12px;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
+      border-radius: 7px;
       text-decoration: none;
       transition: all 0.15s ease;
 
       &:hover {
         border-color: var(--color-primary);
-        box-shadow: var(--shadow-md);
-        transform: translateY(-2px);
+        box-shadow: none;
       }
     }
 
     .action-icon {
-      width: 48px;
-      height: 48px;
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: var(--color-primary-light);
       border-radius: var(--radius-md);
       color: var(--color-primary);
-      margin-bottom: var(--space-4);
+      margin-bottom: 7px;
     }
 
     .action-label {

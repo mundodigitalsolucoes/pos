@@ -19,6 +19,7 @@ import { SidebarComponent } from '../shared/sidebar.component';
             <p>Receba, aceite e acompanhe os pedidos do cardápio em tempo real.</p>
           </div>
           <div class="header-actions">
+            <label class="order-search"><span class="sr-only">Pesquisar cliente ou número do pedido</span><input type="search" placeholder="Cliente ou nº do pedido" [value]="query()" (input)="query.set($any($event.target).value)" /></label>
             <a class="btn btn-secondary" href="/staff/orders">Visão detalhada</a>
             <button class="btn btn-primary" type="button" (click)="loadOrders()" [disabled]="loading()">
               {{ loading() ? 'Atualizando…' : 'Atualizar' }}
@@ -43,11 +44,11 @@ import { SidebarComponent } from '../shared/sidebar.component';
         @if (loading() && orders().length === 0) {
           <div class="empty-state">Carregando pedidos…</div>
         } @else {
-          <div class="board">
+          <div class="work-area"><div class="board">
             <section class="lane lane-new">
               <div class="lane-header"><div><span class="lane-dot"></span><h2>Novos</h2></div><span class="lane-count">{{ newOrders().length }}</span></div>
               <div class="lane-body">
-                @for (order of newOrders(); track order.id) {
+                @for (order of filtered(newOrders()); track order.id) {
                   <article class="order-card new-order-card">
                     <div class="card-top"><div><span class="order-number">#{{ order.id }}</span><span class="channel">{{ channelLabel(order) }}</span></div><span class="order-age">{{ formatTime(order.created_at) }}</span></div>
                     <h3>{{ order.customer_name || order.table_name || 'Pedido' }}</h3>
@@ -57,6 +58,7 @@ import { SidebarComponent } from '../shared/sidebar.component';
                     </div>
                     @if (displayNotes(order.notes)) { <p class="notes">Obs.: {{ displayNotes(order.notes) }}</p> }
                     <div class="card-total"><span>Total</span><strong>{{ formatMoney(order.total_cents) }}</strong></div>
+                    <button type="button" class="detail-link" (click)="select(order)">Ver detalhes</button>
                     <div class="card-actions two">
                       @if (canCancel()) { <button class="btn btn-reject" type="button" (click)="reject(order)" [disabled]="busyOrderId() === order.id">Recusar</button> }
                       @if (canUpdateStatus()) { <button class="btn btn-accept" type="button" (click)="accept(order)" [disabled]="busyOrderId() === order.id">Aceitar pedido</button> }
@@ -69,12 +71,13 @@ import { SidebarComponent } from '../shared/sidebar.component';
             <section class="lane">
               <div class="lane-header"><div><span class="lane-dot preparing"></span><h2>Em preparação</h2></div><span class="lane-count">{{ preparingOrders().length }}</span></div>
               <div class="lane-body">
-                @for (order of preparingOrders(); track order.id) {
+                @for (order of filtered(preparingOrders()); track order.id) {
                   <article class="order-card">
                     <div class="card-top"><div><span class="order-number">#{{ order.id }}</span><span class="channel">{{ channelLabel(order) }}</span></div><span class="order-age">{{ formatTime(order.created_at) }}</span></div>
                     <h3>{{ order.customer_name || order.table_name || 'Pedido' }}</h3>
                     <div class="items">@for (item of activeItems(order); track item.id) { <div class="item"><span>{{ item.quantity }}× {{ item.product_name }}</span></div> }</div>
                     <div class="card-total"><span>Total</span><strong>{{ formatMoney(order.total_cents) }}</strong></div>
+                    <button type="button" class="detail-link" (click)="select(order)">Ver detalhes</button>
                     @if (canUpdateStatus()) { <button class="btn btn-primary full" type="button" (click)="advance(order, 'ready')" [disabled]="busyOrderId() === order.id">Marcar como pronto</button> }
                   </article>
                 } @empty { <div class="lane-empty">Fila de preparação vazia.</div> }
@@ -84,12 +87,13 @@ import { SidebarComponent } from '../shared/sidebar.component';
             <section class="lane">
               <div class="lane-header"><div><span class="lane-dot ready"></span><h2>Prontos</h2></div><span class="lane-count">{{ readyOrders().length }}</span></div>
               <div class="lane-body">
-                @for (order of readyOrders(); track order.id) {
+                @for (order of filtered(readyOrders()); track order.id) {
                   <article class="order-card">
                     <div class="card-top"><div><span class="order-number">#{{ order.id }}</span><span class="channel">{{ channelLabel(order) }}</span></div><span class="order-age">{{ formatTime(order.created_at) }}</span></div>
                     <h3>{{ order.customer_name || order.table_name || 'Pedido' }}</h3>
                     <div class="items">@for (item of activeItems(order); track item.id) { <div class="item"><span>{{ item.quantity }}× {{ item.product_name }}</span></div> }</div>
                     <div class="card-total"><span>Total</span><strong>{{ formatMoney(order.total_cents) }}</strong></div>
+                    <button type="button" class="detail-link" (click)="select(order)">Ver detalhes</button>
                     @if (canUpdateStatus()) {
                       @if (isDelivery(order)) { <button class="btn btn-primary full" type="button" (click)="advance(order, 'out_for_delivery')" [disabled]="busyOrderId() === order.id">Saiu para entrega</button> }
                       @else { <button class="btn btn-primary full" type="button" (click)="advance(order, 'completed')" [disabled]="busyOrderId() === order.id">Pedido entregue</button> }
@@ -102,18 +106,37 @@ import { SidebarComponent } from '../shared/sidebar.component';
             <section class="lane">
               <div class="lane-header"><div><span class="lane-dot delivery"></span><h2>Entrega</h2></div><span class="lane-count">{{ deliveryOrders().length }}</span></div>
               <div class="lane-body">
-                @for (order of deliveryOrders(); track order.id) {
+                @for (order of filtered(deliveryOrders()); track order.id) {
                   <article class="order-card">
                     <div class="card-top"><div><span class="order-number">#{{ order.id }}</span><span class="channel">{{ channelLabel(order) }}</span></div><span class="order-age">{{ formatTime(order.created_at) }}</span></div>
                     <h3>{{ order.customer_name || order.table_name || 'Pedido' }}</h3>
                     @if (order.delivery_address) { <p class="meta">{{ order.delivery_address }}</p> }
                     <div class="card-total"><span>Total</span><strong>{{ formatMoney(order.total_cents) }}</strong></div>
+                    <button type="button" class="detail-link" (click)="select(order)">Ver detalhes</button>
                     @if (canUpdateStatus()) { <button class="btn btn-primary full" type="button" (click)="advance(order, 'completed')" [disabled]="busyOrderId() === order.id">Finalizar pedido</button> }
                   </article>
                 } @empty { <div class="lane-empty">Nenhum pedido em entrega.</div> }
               </div>
             </section>
           </div>
+          <aside class="order-detail" aria-label="Detalhes do pedido selecionado">
+            @if (selectedOrder(); as order) {
+              <div class="detail-heading"><h2>Pedido #{{ order.id }}</h2><button type="button" (click)="selectedId.set(null)" aria-label="Fechar detalhes">×</button></div>
+              <p class="detail-meta">{{ order.customer_name || order.table_name || 'Cliente não informado' }} · {{ channelLabel(order) }}</p>
+              <p class="detail-meta">{{ formatTime(order.created_at) }} · {{ order.status }}</p>
+              @if (order.delivery_address) { <p class="detail-meta">{{ order.delivery_address }}</p> }
+              <h3>Itens</h3>
+              @for (item of activeItems(order); track item.id) {
+                <div class="detail-item"><strong>{{ item.quantity }}× {{ item.product_name }}</strong><span>{{ formatMoney(item.price_cents * item.quantity) }}</span></div>
+                @if (item.customization_summary || item.line_modifiers_summary) { <p class="detail-customization">{{ item.customization_summary || item.line_modifiers_summary }}</p> }
+                @if (item.notes) { <p class="detail-customization">{{ item.notes }}</p> }
+              }
+              @if (displayNotes(order.notes)) { <p class="detail-note">Obs.: {{ displayNotes(order.notes) }}</p> }
+              @if (order.payment_method) { <p class="detail-meta">Pagamento: {{ order.payment_method }}</p> }
+              <div class="detail-total"><span>Total</span><strong>{{ formatMoney(order.total_cents) }}</strong></div>
+              <a class="btn btn-secondary" href="/staff/orders">Abrir visão detalhada</a>
+            } @else { <p class="detail-empty">Selecione um pedido para ver itens, complementos e valores.</p> }
+          </aside></div>
         }
 
         <section class="finished-section">
@@ -146,6 +169,9 @@ import { SidebarComponent } from '../shared/sidebar.component';
   `,
   styles: [`
     .orders-page{padding-bottom:110px}.page-header{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:22px}.eyebrow{color:#D6A92F;text-transform:uppercase;letter-spacing:.08em;font-size:.72rem;font-weight:800}h1{margin:4px 0 6px;color:#2F3453;font-size:1.75rem}.page-header p{margin:0;color:#6F7895}.header-actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:.15s ease}.btn:disabled{opacity:.55;cursor:not-allowed}.btn-primary{background:#374B89;color:#fff}.btn-primary:hover:not(:disabled){background:#2F3453}.btn-secondary{background:#fff;color:#374B89;border:1px solid rgba(47,52,83,.18)}.btn-accept{background:#15803d;color:#fff}.btn-reject{background:#fff;color:#b42318;border:1px solid rgba(180,35,24,.25)}.full{width:100%}.flow-strip{display:flex;align-items:center;gap:10px;overflow-x:auto;padding:12px 14px;margin-bottom:18px;border:1px solid rgba(47,52,83,.10);border-radius:13px;background:#fff}.flow-step{display:flex;align-items:center;gap:7px;min-width:max-content;color:#6F7895}.flow-step strong{display:grid;place-items:center;min-width:28px;height:28px;padding:0 7px;border-radius:999px;background:#F1F2F7;color:#2F3453}.flow-step.has-items strong{background:rgba(214,169,47,.18);color:#80620e}.flow-arrow{color:#B0B5C5}.board{display:grid;grid-template-columns:repeat(4,minmax(245px,1fr));gap:14px;align-items:start}.lane{min-width:0;background:#F7F5EF;border:1px solid rgba(47,52,83,.10);border-radius:14px;overflow:hidden}.lane-new{border-color:rgba(214,169,47,.42)}.lane-header{display:flex;align-items:center;justify-content:space-between;padding:14px;background:#fff;border-bottom:1px solid rgba(47,52,83,.08)}.lane-header>div{display:flex;align-items:center;gap:8px}.lane-header h2{margin:0;font-size:.95rem;color:#2F3453}.lane-dot{width:9px;height:9px;border-radius:50%;background:#D6A92F}.lane-dot.preparing{background:#374B89}.lane-dot.ready{background:#15803d}.lane-dot.delivery{background:#7c3aed}.lane-count{min-width:25px;height:25px;display:grid;place-items:center;border-radius:999px;background:#F1F2F7;color:#2F3453;font-size:.75rem;font-weight:800}.lane-body{display:flex;flex-direction:column;gap:10px;padding:10px;max-height:68vh;overflow-y:auto}.order-card{background:#fff;border:1px solid rgba(47,52,83,.10);border-radius:12px;padding:13px;box-shadow:0 4px 12px rgba(47,52,83,.04)}.new-order-card{border-left:4px solid #D6A92F}.card-top{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.card-top>div{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.order-number{font-weight:900;color:#2F3453}.channel{padding:3px 7px;border-radius:999px;background:#F1F2F7;color:#5f6885;font-size:.68rem;font-weight:700}.order-age{color:#7C849B;font-size:.72rem;white-space:nowrap}.order-card h3{margin:0 0 7px;color:#2F3453;font-size:.98rem}.meta,.notes{margin:6px 0;font-size:.77rem;color:#6F7895;line-height:1.4}.notes{padding:7px 8px;border-radius:7px;background:#FFF9E8;color:#7a5d0b}.items{margin:10px 0;padding:8px 0;border-top:1px solid #ECEEF4;border-bottom:1px solid #ECEEF4}.item{display:flex;justify-content:space-between;gap:8px;padding:3px 0;color:#434A61;font-size:.76rem}.card-total{display:flex;justify-content:space-between;color:#2F3453;font-size:.85rem;margin-bottom:10px}.card-actions{display:grid;gap:8px}.card-actions.two{grid-template-columns:1fr 1.35fr}.lane-empty,.empty-state{padding:24px 12px;text-align:center;color:#8A91A5;font-size:.82rem}.alert.error{margin:0 0 14px;padding:10px 12px;border-radius:9px;background:#fff1f0;color:#b42318;border:1px solid #ffd5d2}.finished-section{margin-top:20px;padding:16px;border:1px solid rgba(47,52,83,.10);border-radius:14px;background:#fff}.finished-header{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:10px}.finished-header h2{margin:2px 0 0;color:#2F3453;font-size:1.1rem}.finished-header a{color:#374B89;text-decoration:none;font-weight:700;font-size:.8rem}.finished-list{display:grid;gap:2px}.finished-row{display:grid;grid-template-columns:70px 1fr 120px 110px;gap:10px;padding:9px 8px;border-top:1px solid #EEF0F5;align-items:center;font-size:.78rem;color:#606980}.finished-row strong{color:#2F3453}.incoming-dock{position:fixed;left:calc(var(--sidebar-width,240px) + 22px);right:22px;bottom:18px;z-index:850;display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid #D6A92F;border-radius:14px;background:#fff;box-shadow:0 15px 40px rgba(47,52,83,.22)}.incoming-pulse{width:13px;height:13px;border-radius:50%;background:#D6A92F;box-shadow:0 0 0 0 rgba(214,169,47,.45);animation:pulse 1.35s infinite;flex:0 0 auto}.incoming-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.incoming-label{color:#8a680d;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.incoming-main strong{color:#2F3453}.incoming-main>span:last-child{color:#6F7895;font-size:.76rem}.incoming-actions{display:flex;gap:8px;flex-wrap:wrap}@keyframes pulse{70%{box-shadow:0 0 0 11px rgba(214,169,47,0)}100%{box-shadow:0 0 0 0 rgba(214,169,47,0)}}@media(max-width:1200px){.board{grid-template-columns:repeat(2,minmax(260px,1fr))}}@media(max-width:768px){.page-header{align-items:flex-start;flex-direction:column}.board{grid-template-columns:1fr}.lane-body{max-height:none}.incoming-dock{left:12px;right:12px;bottom:12px;align-items:flex-start;flex-wrap:wrap}.incoming-main{min-width:220px}.incoming-actions{width:100%;display:grid;grid-template-columns:1fr 1.3fr}.finished-row{grid-template-columns:55px 1fr}.finished-row span:nth-child(3),.finished-row span:nth-child(4){display:none}}
+    .order-search input{height:36px;width:230px;max-width:100%;border:1px solid #d7dbe6;border-radius:6px;padding:6px 10px;font:inherit}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    .work-area{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px;align-items:start}.board{grid-template-columns:repeat(2,minmax(0,1fr))}.lane-body{max-height:48vh}.detail-link{border:0;background:transparent;color:#374B89;font-size:.75rem;font-weight:700;cursor:pointer;padding:2px 0 8px}.order-detail{background:#fff;border:1px solid #e0e2e9;border-radius:8px;min-height:380px;padding:14px;position:sticky;top:64px}.detail-heading{display:flex;justify-content:space-between;align-items:center}.detail-heading h2{margin:0;font-size:1rem}.detail-heading button{border:0;background:none;font-size:1.35rem;cursor:pointer}.detail-meta,.detail-customization,.detail-note,.detail-empty{font-size:.77rem;color:#6F7895;line-height:1.4}.order-detail h3{font-size:.8rem;margin:16px 0 8px}.detail-item{display:flex;justify-content:space-between;gap:8px;border-top:1px solid #edf0f4;padding:9px 0;font-size:.76rem}.detail-item span{white-space:nowrap}.detail-customization{margin:-4px 0 8px;color:#374B89}.detail-total{display:flex;justify-content:space-between;border-top:1px solid #e0e2e9;padding:12px 0;font-size:.86rem}.detail-empty{text-align:center;margin:120px 0}
+    @media(max-width:1350px){.work-area{grid-template-columns:minmax(0,1fr)}.order-detail{position:static;min-height:0}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:720px){.board{grid-template-columns:1fr}.order-search input{width:100%}.order-search{width:100%}}
   `]
 })
 export class OrderManagementComponent implements OnInit, OnDestroy {
@@ -159,6 +185,9 @@ export class OrderManagementComponent implements OnInit, OnDestroy {
   loading = signal(true);
   errorMessage = signal('');
   busyOrderId = signal<number | null>(null);
+  query = signal('');
+  selectedId = signal<number | null>(null);
+  selectedOrder = computed(() => this.orders().find(o => o.id === this.selectedId()) ?? null);
   currencyCode = signal('BRL');
 
   canUpdateStatus = computed(() => this.permissions.hasPermission(this.api.getCurrentUser(), 'order:update_status'));
@@ -169,6 +198,11 @@ export class OrderManagementComponent implements OnInit, OnDestroy {
   deliveryOrders = computed(() => this.orders().filter(o => o.status === 'out_for_delivery' || o.status === 'partially_delivered').sort((a,b) => a.id - b.id));
   completedToday = computed(() => this.orders().filter(o => (o.status === 'completed' || o.status === 'paid') && this.isToday(o.created_at)).sort((a,b) => b.id - a.id));
   latestPending = computed(() => this.newOrders().at(-1) ?? null);
+  select(order: Order): void { this.selectedId.set(order.id); }
+  filtered(orders: Order[]): Order[] {
+    const q = this.query().trim().toLowerCase();
+    return q ? orders.filter(o => String(o.id).includes(q) || (o.customer_name || '').toLowerCase().includes(q) || (o.table_name || '').toLowerCase().includes(q)) : orders;
+  }
 
   ngOnInit(): void {
     this.api.getTenantSettings().subscribe({ next: settings => this.currencyCode.set((settings.currency_code || 'BRL').toUpperCase()) });

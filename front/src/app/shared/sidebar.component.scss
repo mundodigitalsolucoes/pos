@@ -12,7 +12,7 @@
 
 // Sidebar navigation
 .sidebar {
-    width: 240px;
+    width: 248px;
     background: var(--color-surface);
     border-right: 1px solid var(--color-border);
     display: flex;
@@ -26,12 +26,20 @@
 }
 
 .sidebar-header {
-    padding: var(--space-5);
+    padding: 15px 18px;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     border-bottom: 1px solid var(--color-border);
 }
+.brand-logo { width: 142px; max-height: 38px; object-fit: contain; object-position: left center; }
+.tenant-card { display: flex; gap: 9px; align-items: center; min-width: 0; margin: 12px 10px 4px; padding: 9px; background: #F7F5EF; border: 1px solid #e5e4e0; border-radius: 8px; }
+.tenant-avatar { width: 34px; height: 34px; border-radius: 5px; object-fit: cover; flex: 0 0 auto; }
+.tenant-initial { display: grid; place-items: center; background: #374B89; color: white; font-weight: 700; }
+.tenant-details { display: grid; min-width: 0; gap: 2px; color: #2F3453; font-size: .8rem; }
+.tenant-details strong, .tenant-details small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tenant-details small { color: #70758a; font-size: .7rem; }
+.nav-label { margin: 14px 16px 4px; color: #858b9d; text-transform: uppercase; letter-spacing: .08em; font-size: .65rem; font-weight: 800; }
 
 .logo-container {
     display: flex;
@@ -95,7 +103,7 @@
 // Navigation
 .nav {
     flex: 1;
-    padding: var(--space-4) 0;
+    padding: 3px 0 12px;
     overflow-y: auto;
 }
 
@@ -103,14 +111,14 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-5);
+    padding: 8px 16px;
     color: var(--color-text-muted);
     text-decoration: none;
-    font-size: 0.9375rem;
+    font-size: 0.83rem;
     font-weight: 500;
     transition: all 0.15s ease;
     border-left: 3px solid transparent;
-    min-height: 44px; // Touch target
+    min-height: 40px;
 
     &:hover {
         color: var(--color-text);
@@ -144,11 +152,11 @@
     align-items: center;
     gap: var(--space-3);
     width: 100%;
-    padding: var(--space-3) var(--space-5);
+    padding: 8px 16px;
     background: none;
     border: none;
     color: var(--color-text-muted);
-    font-size: 0.9375rem;
+    font-size: 0.83rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -371,12 +379,16 @@
 // Main content area
 .main {
     flex: 1;
-    margin-left: 240px;
-    padding: var(--space-6);
+    margin-left: 248px;
+    padding: 0 20px 24px;
     min-width: 0;
-    max-width: calc(100vw - 240px);
+    max-width: calc(100vw - 248px);
     overflow-x: hidden;
 }
+.work-topbar { height: 54px; margin: 0 -20px 18px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e3e5eb; background: #fff; color: #2F3453; font-size: .92rem; }
+.topbar-actions { display: flex; align-items: center; gap: 18px; min-width: 0; color: #636c82; font-size: .78rem; }
+.topbar-actions a { color: #374B89; text-decoration: none; }
+.topbar-actions span { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .connectivity-banner {
     margin: 0 0 var(--space-4);
@@ -440,10 +452,11 @@
 
     .main {
         margin-left: 0;
-        padding-top: calc(56px + var(--space-4));
+        padding-top: 56px;
         padding-left: var(--space-4);
         padding-right: var(--space-4);
         padding-bottom: var(--space-4);
         max-width: 100vw;
     }
+    .work-topbar { height: 46px; margin-bottom: 12px; }
 }

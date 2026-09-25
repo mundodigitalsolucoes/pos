@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
-import { ApiService, TenantUiModuleKey, User } from '../services/api.service';
+import { ApiService, TenantSettings, TenantUiModuleKey, User } from '../services/api.service';
 import { PermissionService, Permission } from '../services/permission.service';
 import { environment } from '../../environments/environment';
 import { LanguagePickerComponent } from './language-picker.component';
@@ -28,7 +28,7 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
           <span></span>
         </button>
         <div class="mobile-brand" [attr.title]="brandTitle()" [attr.aria-label]="brandTitle()">
-          <span class="header-title">POS</span>
+          <span class="header-title">MDS Food</span>
           @if (tenantOrgName()) {
             <span class="header-org-name" [attr.title]="tenantOrgName()!" [attr.aria-label]="tenantOrgName()!">{{
               tenantOrgName()
@@ -40,7 +40,7 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
       <aside class="sidebar">
         <div class="sidebar-header">
           <div class="logo-container" [attr.title]="brandTitle()" [attr.aria-label]="brandTitle()">
-            <span class="logo">POS</span>
+            <img class="brand-logo" src="/logo-mds-food-header.png" alt="MDS Food" />
             <span class="version">
               {{ version }}
               <span class="commit-hash">{{ commitHash }}</span>
@@ -48,11 +48,6 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
                 <span class="tenant-id" title="Tenant ID">{{ tid }}</span>
               }
             </span>
-            @if (tenantOrgName()) {
-              <span class="sidebar-org-name" [attr.title]="tenantOrgName()!" [attr.aria-label]="tenantOrgName()!">{{
-                tenantOrgName()
-              }}</span>
-            }
           </div>
           <button class="close-btn" (click)="closeSidebar()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -61,7 +56,19 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
           </button>
         </div>
 
+        @if (tenantOrgName()) {
+          <div class="tenant-card">
+            @if (tenantLogoUrl()) { <img [src]="tenantLogoUrl()!" alt="" class="tenant-avatar" /> }
+            @else { <span class="tenant-avatar tenant-initial" aria-hidden="true">{{ tenantOrgName().charAt(0) }}</span> }
+            <div class="tenant-details">
+              <strong [title]="tenantOrgName()">{{ tenantOrgName() }}</strong>
+              @if (tenantSettings()?.address) { <small [title]="tenantSettings()!.address!">{{ tenantSettings()!.address }}</small> }
+            </div>
+          </div>
+        }
+
         <nav class="nav" id="staff-sidebar-nav" #navScroll tabindex="-1" (scroll)="persistNavScroll()">
+          <div class="nav-label">Operação</div>
           <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link" (click)="closeSidebar()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
@@ -69,6 +76,30 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
             </svg>
             <span>{{ 'NAV.HOME' | translate }}</span>
           </a>
+          <a routerLink="/gestao-pedidos" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>
+            <span>Gestão de pedidos</span>
+          </a>
+          @if (moduleEnabled('kitchen_bar')) {
+            <a routerLink="/kitchen" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h18v12H3zM7 8V5a5 5 0 0 1 10 0v3"/></svg><span>KDS / Cozinha</span>
+            </a>
+          }
+          @if (hasPermission('order:update_status') && hasPermission('order:mark_paid')) {
+            <a routerLink="/caixa" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="15" rx="2"/><path d="M2 11h20M6 3h12"/></svg><span>Caixa</span>
+            </a>
+          }
+          <div class="nav-label">Gestão</div>
+          @if (canViewReports()) {
+            <a routerLink="/reports" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20V4M3 20h18M7 16l4-5 4 2 5-7"/></svg><span>Desempenho</span></a>
+          }
+          <a routerLink="/staff/orders" [queryParams]="{view:'history'}" class="nav-link" (click)="closeSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Histórico de pedidos</span></a>
+          @if (canViewSettings()) {
+            <a routerLink="/minha-empresa" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18v11H3zM2 10l3-6h14l3 6M8 21v-7h8v7"/></svg><span>Minha empresa</span></a>
+          }
+          <a routerLink="/products" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Catálogo</span></a>
+          <div class="nav-label">Outras ferramentas</div>
           @if (canViewMyShift()) {
             <a routerLink="/my-shift" routerLinkActive="active" class="nav-link" (click)="closeSidebar()">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -126,9 +157,6 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
                     </a>
                   }
                   @if (moduleEnabled('kitchen_bar')) {
-                    <a routerLink="/kitchen" routerLinkActive="active" class="nav-sublink" (click)="closeSidebar()">
-                      <span>{{ 'NAV.KITCHEN_DISPLAY' | translate }}</span>
-                    </a>
                     <a routerLink="/bar" routerLinkActive="active" class="nav-sublink" (click)="closeSidebar()">
                       <span>{{ 'NAV.BEVERAGES_DISPLAY' | translate }}</span>
                     </a>
@@ -274,11 +302,6 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
               </button>
               @if (adminOpen()) {
                 <div class="nav-submenu" id="nav-group-admin">
-                  @if (canViewReports()) {
-                    <a routerLink="/reports" routerLinkActive="active" class="nav-sublink" (click)="closeSidebar()">
-                      <span>{{ 'NAV.REPORTS' | translate }}</span>
-                    </a>
-                  }
                   @if (canViewUsers() && moduleEnabled('users')) {
                     <a routerLink="/users" routerLinkActive="active" class="nav-sublink" (click)="closeSidebar()">
                       <span>{{ 'NAV.USERS' | translate }}</span>
@@ -322,6 +345,13 @@ type NavGroupKey = 'operations' | 'planning' | 'catalog' | 'admin';
       <div class="overlay" (click)="closeSidebar()"></div>
 
       <main class="main">
+        <header class="work-topbar">
+          <strong>{{ pageTitle() }}</strong>
+          <div class="topbar-actions">
+            @if (canViewSettings()) { <a routerLink="/settings">Configurações</a> }
+            <span [title]="user()?.email || ''">{{ user()?.full_name || user()?.email }}</span>
+          </div>
+        </header>
         @if (showOfflineBanner()) {
           <div
             class="connectivity-banner"
@@ -358,6 +388,8 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('navScroll') navScroll?: ElementRef<HTMLElement>;
 
   user = signal<User | null>(null);
+  tenantSettings = signal<TenantSettings | null>(null);
+  currentPath = signal('');
   sidebarOpen = signal(false);
   operationsOpen = signal(false);
   planningOpen = signal(false);
@@ -409,6 +441,18 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   tenantOrgName = computed(() => this.api.tenantDisplayName()?.trim() ?? '');
+  tenantLogoUrl = computed(() => this.api.getTenantLogoUrl(this.tenantSettings()?.logo_filename, this.tenantId()));
+  pageTitle = computed(() => {
+    const path = this.currentPath();
+    if (path === '/dashboard') return 'Dashboard';
+    if (path === '/gestao-pedidos') return 'Gestão de pedidos';
+    if (path === '/products' || path.startsWith('/cardapio/')) return 'Catálogo';
+    if (path === '/minha-empresa') return 'Minha empresa';
+    if (path === '/reports') return 'Desempenho';
+    if (path === '/caixa') return 'Caixa';
+    if (path === '/kitchen') return 'KDS / Cozinha';
+    return 'MDS Food';
+  });
 
   tenantId = computed(() => {
     const id = this.user()?.tenant_id;
@@ -417,11 +461,13 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
 
   brandTitle = computed(() => {
     const org = this.tenantOrgName();
-    return org ? `POS (${org})` : 'POS';
+    return org ? `MDS Food (${org})` : 'MDS Food';
   });
 
   ngOnInit() {
     this.api.ensureTenantUiModulesLoaded().subscribe();
+    this.api.getTenantSettings().subscribe({ next: settings => this.tenantSettings.set(settings) });
+    this.currentPath.set(this.router.url.split('?')[0]);
     this.api.user$.subscribe(user => {
       this.user.set(user);
       if (user && String(user.role).toLowerCase() === 'owner') {
@@ -441,6 +487,7 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((event) => {
+        this.currentPath.set(event.urlAfterRedirects.split('?')[0]);
         this.syncGroupOpenFromRoute(event.urlAfterRedirects);
         this.syncNavScrollAfterRouteChange();
       });
