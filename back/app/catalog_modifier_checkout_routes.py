@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 from sqlmodel import Session
 
 from . import models
+from . import promo_service as promo_svc
 from .catalog_modifier_pricing import (
     CatalogModifierValidationError,
     validate_and_price_catalog_modifiers,
@@ -20,6 +21,7 @@ from .delivery_order_service import (
     validate_delivery_coverage,
 )
 from .rate_limits import public_menu_ip_limit
+from .public_tenant_menu import _is_available_today, _tenant_today
 from .settings import settings
 
 router = APIRouter()
@@ -35,40 +37,34 @@ def _selected_modifier_ids(customization_answers: dict | None) -> list[int]:
         raise HTTPException(status_code=400, detail="Seleção de complementos inválida.")
     result: list[int] = []
     for value in raw:
-        try:
-            result.append(int(value))
-        except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=400, detail="Seleção de complementos inválida.") from exc
+        if type(value) is not int or value < 1 or value in result:
+            raise HTTPException(status_code=400, detail="Seleção de complementos inválida.")
+        result.append(value)
     return result
 
 
-def _canonical_product_id(session: Session, tenant_id: int, public_product_id: int) -> int:
-    tenant_product = session.execute(
-        text(
-            """
-            SELECT product_id
-            FROM tenant_product
-            WHERE id = :id AND tenant_id = :tenant_id
-            """
-        ),
-        {"id": public_product_id, "tenant_id": tenant_id},
-    ).mappings().first()
-    if tenant_product is not None:
-        linked = tenant_product.get("product_id")
-        if linked is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Este item ainda não está disponível para personalização.",
-            )
-        return int(linked)
+def _public_product_snapshot(session: Session, tenant: models.Tenant, public_product_id: int) -> dict:
+    today = _tenant_today(tenant)
+    tp = session.get(models.TenantProduct, public_product_id)
+    if tp is not None and tp.tenant_id == tenant.id:
+        linked = session.get(models.Product, tp.product_id) if tp.product_id else None
+        if (not tp.is_active or not _is_available_today(tp.available_from, tp.available_until, today)
+            or (tp.product_id is not None and (linked is None or linked.tenant_id != tenant.id))
+            or (linked is not None and not _is_available_today(linked.available_from, linked.available_until, today))):
+            raise HTTPException(status_code=400, detail=f"Produto indisponível: {public_product_id}")
+        catalog = session.get(models.ProductCatalog, tp.catalog_id)
+        return {"canonical_product_id": tp.product_id, "price_cents": tp.price_cents,
+                "name": tp.name,
+                "category": catalog.category if catalog else None}
 
-    product = session.execute(
-        text("SELECT id FROM product WHERE id = :id AND tenant_id = :tenant_id"),
-        {"id": public_product_id, "tenant_id": tenant_id},
-    ).first()
-    if not product:
+    product = session.get(models.Product, public_product_id)
+    if product is None or product.tenant_id != tenant.id:
         raise HTTPException(status_code=400, detail=f"Produto não encontrado: {public_product_id}")
-    return public_product_id
+    if not _is_available_today(product.available_from, product.available_until, today):
+        raise HTTPException(status_code=400, detail=f"Produto indisponível: {public_product_id}")
+    return {"canonical_product_id": product.id, "price_cents": product.price_cents,
+            "name": product.name,
+            "category": product.category}
 
 
 def _combo_snapshot(session: Session, tenant_id: int, product_id: int) -> list[dict]:
@@ -118,22 +114,32 @@ def _apply_modifier_snapshots(
     if len(order_items) != len(prepared_lines):
         raise HTTPException(status_code=500, detail="Não foi possível consolidar os complementos do pedido.")
 
+    eligible = promo_svc.eligible_promos(session, tenant_id=order.tenant_id,
+                                         channel=models.OrderChannel.satisfecho_delivery.value)
     for order_item, prepared in zip(order_items, prepared_lines, strict=True):
+        order_item.product_name = prepared["name"]
         modifier = prepared["modifier"]
         delta = int(modifier["price_delta_cents"] or 0)
-        if delta:
-            order_item.price_cents = int(order_item.price_cents or 0) + delta
-            if order_item.list_price_cents is not None:
-                order_item.list_price_cents = int(order_item.list_price_cents) + delta
-            rate = int(order_item.tax_rate_percent or 0)
-            if rate > 0:
-                total_incl = int(order_item.price_cents) * int(order_item.quantity)
-                order_item.tax_amount_cents = round(total_incl * rate / (100 + rate))
+        applied = promo_svc.resolve_line_price(
+            session, tenant_id=order.tenant_id, list_price_cents=prepared["price_cents"],
+            product_category=prepared["category"],
+            channel=models.OrderChannel.satisfecho_delivery.value, eligible=eligible,
+        )
+        order_item.price_cents = applied["price_cents"] + delta
+        order_item.list_price_cents = (applied["list_price_cents"] + delta
+                                       if applied["list_price_cents"] is not None else None)
+        order_item.discount_cents = applied["discount_cents"]
+        order_item.promo_id = applied["promo_id"]
+        order_item.promo_snapshot = applied["promo_snapshot"]
+        rate = int(order_item.tax_rate_percent or 0)
+        if rate > 0:
+            total_incl = int(order_item.price_cents) * int(order_item.quantity)
+            order_item.tax_amount_cents = round(total_incl * rate / (100 + rate))
 
         combo = _combo_snapshot(
             session,
             order.tenant_id,
-            int(prepared["canonical_product_id"]),
+            int(prepared["canonical_product_id"] or order_item.product_id),
         )
         answers: dict = {}
         summary_parts: list[str] = []
@@ -159,9 +165,7 @@ def _apply_modifier_snapshots(
     session.commit()
 
 
-@router.post("/public/catalog-checkout/{tenant_id}")
-@public_menu_ip_limit()
-def create_public_catalog_checkout(
+def create_public_catalog_checkout_impl(
     request: Request,
     response: Response,
     tenant_id: int,
@@ -206,22 +210,30 @@ def create_public_catalog_checkout(
     prepared_lines: list[dict] = []
     service_lines: list[dict] = []
     for item in body.items:
+        if item.quantity < 1 or item.quantity > 100:
+            raise HTTPException(status_code=400, detail="Quantidade inválida.")
         public_product_id = int(item.product_id)
-        canonical_product_id = _canonical_product_id(session, tenant_id, public_product_id)
+        product_snapshot = _public_product_snapshot(session, tenant, public_product_id)
+        canonical_product_id = product_snapshot["canonical_product_id"]
         selected_ids = _selected_modifier_ids(item.customization_answers)
+        if canonical_product_id is None and selected_ids:
+            raise HTTPException(status_code=400, detail="Este item não possui complementos disponíveis.")
         try:
             modifier = validate_and_price_catalog_modifiers(
                 session,
                 tenant_id=tenant_id,
                 product_id=canonical_product_id,
                 selected_option_ids=selected_ids,
-            )
+            ) if canonical_product_id is not None else {"price_delta_cents": 0, "groups": [], "summary": None}
         except CatalogModifierValidationError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         prepared_lines.append(
             {
                 "canonical_product_id": canonical_product_id,
+                "price_cents": product_snapshot["price_cents"],
+                "name": product_snapshot["name"],
+                "category": product_snapshot["category"],
                 "selected_option_ids": selected_ids,
                 "modifier": modifier,
             }
@@ -246,12 +258,17 @@ def create_public_catalog_checkout(
         courier_user_id=None,
         notify_kitchen=False,
         delivery_fee_cents=fee,
+        commit_order=False,
     )
     if not order:
         detail = outcome.get("detail", "create_failed")
         raise HTTPException(status_code=400, detail=str(detail))
 
-    _apply_modifier_snapshots(session, order=order, prepared_lines=prepared_lines)
+    try:
+        _apply_modifier_snapshots(session, order=order, prepared_lines=prepared_lines)
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(order)
 
     items = session.exec(
@@ -286,3 +303,15 @@ def create_public_catalog_checkout(
         "revolut_configured": revolut_configured,
         "created_at": order.created_at.isoformat() if order.created_at else None,
     }
+
+
+@router.post("/public/catalog-checkout/{tenant_id}")
+@public_menu_ip_limit()
+def create_public_catalog_checkout(
+    request: Request,
+    response: Response,
+    tenant_id: int,
+    body: models.PublicSatisfechoDeliveryOrderCreate,
+    session: Session = Depends(get_session),
+) -> dict:
+    return create_public_catalog_checkout_impl(request, response, tenant_id, body, session)

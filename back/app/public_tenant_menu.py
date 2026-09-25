@@ -384,14 +384,14 @@ def _load_flat_products(
     eligible = promo_svc.eligible_promos(
         session,
         tenant_id=tenant_id,
-        channel=models.OrderChannel.table.value,
+        channel=models.OrderChannel.satisfecho_delivery.value,
     )
     for product in products:
         promo_svc.decorate_menu_product(
             session,
             tenant_id=tenant_id,
             product=product,
-            channel=models.OrderChannel.table.value,
+            channel=models.OrderChannel.satisfecho_delivery.value,
             eligible=eligible,
         )
         if product.get("list_price_cents") is not None:

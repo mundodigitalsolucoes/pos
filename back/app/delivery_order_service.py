@@ -421,6 +421,7 @@ def create_satisfecho_delivery_order(
     courier_user_id: int | None = None,
     notify_kitchen: bool = True,
     delivery_fee_cents: int | None = None,
+    commit_order: bool = True,
 ) -> tuple[models.Order | None, dict]:
     """
     Create a first-party Satisfecho Delivery order (no marketplace integration, no table).
@@ -479,8 +480,11 @@ def create_satisfecho_delivery_order(
         resolved_lines=resolved_lines,
         order_date=order_date,
     )
-    session.commit()
-    session.refresh(order)
+    if commit_order:
+        session.commit()
+        session.refresh(order)
+    else:
+        session.flush()
     if notify_kitchen:
         _publish_and_deduct(session, order, tenant_id, "Satisfecho Delivery")
     return order, {"status": "created", "order_id": order.id}
