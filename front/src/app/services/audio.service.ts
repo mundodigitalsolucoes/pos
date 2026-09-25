@@ -16,6 +16,17 @@ export class AudioService {
     }
   }
 
+  /** Resume audio only after an explicit user gesture, as required by browser autoplay policies. */
+  async enableFromGesture(): Promise<boolean> {
+    if (!this.audioContext) return false;
+    try {
+      if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+      return this.audioContext.state === 'running';
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Play a short ping sound notification
    * @param frequency - Frequency in Hz (default: 800)

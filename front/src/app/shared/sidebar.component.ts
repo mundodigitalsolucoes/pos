@@ -1,9 +1,8 @@
-import { Component, inject, signal, OnInit, computed, AfterViewInit, OnDestroy, ViewChild, ElementRef, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, OnInit, computed, AfterViewInit, OnDestroy, ViewChild, ElementRef, DestroyRef, Input } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
-import { ApiService, TenantSettings, TenantUiModuleKey, User } from '../services/api.service';
+import { ApiService, Order, TenantSettings, TenantUiModuleKey, User } from '../services/api.service';
 import { PermissionService, Permission } from '../services/permission.service';
 import { environment } from '../../environments/environment';
 import { LanguagePickerComponent } from './language-picker.component';
@@ -66,7 +65,7 @@ import { OfflineOrderQueueService } from '../services/offline-order-queue.servic
 
         <nav class="nav" id="staff-sidebar-nav" #navScroll tabindex="-1" (scroll)="persistNavScroll()" aria-label="Navegação principal">
           @if (canAccess('/staff/orders')) {
-            <a routerLink="/gestao-pedidos" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><span>Gestão de pedidos</span></a>
+            <a routerLink="/gestao-pedidos" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg><span>Gestão de pedidos</span></a>
           }
           @if (moduleEnabled('kitchen_bar') && canAccess('/kitchen')) {
             <a routerLink="/kitchen" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><span>KDS / Cozinha</span></a>
@@ -124,7 +123,30 @@ import { OfflineOrderQueueService } from '../services/offline-order-queue.servic
         <header class="work-topbar">
           <strong>{{ pageTitle() }}</strong>
           <div class="topbar-actions">
-            <span [title]="user()?.email || ''">{{ user()?.full_name || user()?.email }}</span>
+            @if (currentPath() === '/gestao-pedidos') {
+              <button type="button" class="topbar-icon print-indicator" [class.online]="printStatus() === 'online'" (click)="refreshPrintStatus()" [attr.title]="printStatus() === 'online' ? 'Impressora conectada; atualizar estado' : printStatus() === 'offline' ? 'Agente de impressão desconectado; atualizar estado' : 'Verificar estado da impressão'" aria-label="Atualizar estado da impressão">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4V9h16v9h-2M6 14h12v7H6zM17 11h1"/></svg><i aria-hidden="true"></i>
+              </button>
+              <details class="topbar-menu notifications-menu">
+                <summary class="topbar-icon" aria-label="Pedidos aguardando aceite">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+                  @if (pendingOrders.length) { <b class="notification-count">{{ pendingOrders.length }}</b> }
+                </summary>
+                <div class="topbar-popover"><strong>Pedidos aguardando aceite</strong>
+                  @for (order of pendingOrders; track order.id) {
+                    <a routerLink="/staff/orders" [queryParams]="{focusOrder:order.id}">#{{ order.id }} · {{ order.customer_name || order.table_name || 'Pedido' }}</a>
+                  } @empty { <p>Nenhum pedido aguardando.</p> }
+                </div>
+              </details>
+            }
+            <details class="topbar-menu profile-menu">
+              <summary class="topbar-icon profile-avatar" [attr.aria-label]="'Perfil de ' + (user()?.full_name || user()?.email || 'usuário')">{{ profileInitial() }}</summary>
+              <div class="topbar-popover"><strong>{{ user()?.full_name || user()?.email }}</strong>
+                @if (canViewMyShift()) { <a routerLink="/my-shift">Meu turno</a> }
+                @if (canViewSettings()) { <a routerLink="/settings">Configurações</a> }
+                <button type="button" (click)="logout()">Sair</button>
+              </div>
+            </details>
           </div>
         </header>
         @if (showOfflineBanner()) {
@@ -160,11 +182,13 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly offlineQueue = inject(OfflineOrderQueueService);
 
   @ViewChild('navScroll') navScroll?: ElementRef<HTMLElement>;
+  @Input() pendingOrders: Order[] = [];
 
   user = signal<User | null>(null);
   tenantSettings = signal<TenantSettings | null>(null);
   currentPath = signal('');
   sidebarOpen = signal(false);
+  printStatus = signal<'online' | 'offline' | 'unknown'>('unknown');
   version = environment.version;
   commitHash = environment.commitHash;
 
@@ -185,10 +209,11 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
 
   tenantOrgName = computed(() => this.api.tenantDisplayName()?.trim() ?? '');
   tenantLogoUrl = computed(() => this.api.getTenantLogoUrl(this.tenantSettings()?.logo_filename, this.tenantId()));
+  profileInitial = computed(() => (this.user()?.full_name || this.user()?.email || 'U').trim().charAt(0).toUpperCase());
   pageTitle = computed(() => {
     const path = this.currentPath();
     if (path === '/dashboard') return 'Desempenho';
-    if (path === '/gestao-pedidos') return 'Gestão de pedidos';
+    if (path === '/gestao-pedidos') return 'Últimos pedidos';
     if (path === '/products' || path.startsWith('/cardapio/')) return 'Catálogo';
     if (path === '/minha-empresa') return 'Minha empresa';
     if (path === '/reports') return 'Desempenho';
@@ -211,6 +236,7 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
     this.api.ensureTenantUiModulesLoaded().subscribe();
     this.api.getTenantSettings().subscribe({ next: settings => this.tenantSettings.set(settings) });
     this.currentPath.set(this.router.url.split('?')[0]);
+    if (this.currentPath() === '/gestao-pedidos') this.refreshPrintStatus();
     this.api.user$.subscribe(user => {
       this.user.set(user);
       if (user && String(user.role).toLowerCase() === 'owner') {
@@ -230,6 +256,7 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
       )
       .subscribe((event) => {
         this.currentPath.set(event.urlAfterRedirects.split('?')[0]);
+        if (this.currentPath() === '/gestao-pedidos') this.refreshPrintStatus();
         this.syncNavScrollAfterRouteChange();
       });
   }
@@ -310,6 +337,13 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
   closeSidebar() {
     this.persistNavScroll();
     this.sidebarOpen.set(false);
+  }
+
+  refreshPrintStatus(): void {
+    this.api.getPrintBridgeStatus().subscribe({
+      next: status => this.printStatus.set(status.agent_online ? 'online' : 'offline'),
+      error: () => this.printStatus.set('unknown'),
+    });
   }
 
   logout() {

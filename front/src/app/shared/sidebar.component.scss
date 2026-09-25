@@ -12,7 +12,7 @@
 
 // Sidebar navigation
 .sidebar {
-    width: 248px;
+    width: 220px;
     background: var(--color-surface);
     border-right: 1px solid var(--color-border);
     display: flex;
@@ -383,16 +383,30 @@
 // Main content area
 .main {
     flex: 1;
-    margin-left: 248px;
+    margin-left: 220px;
     padding: 0 20px 24px;
     min-width: 0;
-    max-width: calc(100vw - 248px);
+    max-width: calc(100vw - 220px);
     overflow-x: hidden;
 }
-.work-topbar { height: 54px; margin: 0 -20px 18px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e3e5eb; background: #fff; color: #2F3453; font-size: .92rem; }
+.work-topbar { height: 46px; margin: 0 -20px 10px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e3e5eb; background: #fff; color: #2F3453; font-size: .92rem; }
 .topbar-actions { display: flex; align-items: center; gap: 18px; min-width: 0; color: #636c82; font-size: .78rem; }
 .topbar-actions a { color: #374B89; text-decoration: none; }
 .topbar-actions span { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-icon { width: 31px; height: 31px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #374B89; cursor: pointer; position: relative; }
+.topbar-icon:hover { background: #f7f5ef; }
+.print-indicator i { width: 6px; height: 6px; position: absolute; bottom: 2px; right: 1px; border-radius: 50%; background: #a0a4af; }
+.print-indicator.online i { background: #168257; }
+.topbar-menu { position: relative; }
+.topbar-menu summary { list-style: none; }
+.topbar-menu summary::-webkit-details-marker { display: none; }
+.profile-avatar { border-radius: 50%; background: #374B89; color: white; font-weight: 800; }
+.notification-count { position: absolute; top: -4px; right: -4px; min-width: 15px; padding: 1px 3px; box-sizing: border-box; border-radius: 12px; background: #C19620; color: white; font-size: .62rem; text-align: center; }
+.topbar-popover { position: absolute; z-index: 500; top: 36px; right: 0; min-width: 205px; max-width: min(320px, 85vw); max-height: 310px; overflow-y: auto; padding: 9px; border: 1px solid #d9dce4; background: white; box-shadow: 0 5px 15px #2F345321; }
+.topbar-popover strong { display: block; padding: 7px 8px; color: #2F3453; white-space: normal; }
+.topbar-popover a, .topbar-popover button { display: block; box-sizing: border-box; width: 100%; padding: 8px; border: 0; background: transparent; color: #374B89; text-align: left; text-decoration: none; cursor: pointer; font: inherit; }
+.topbar-popover a:hover, .topbar-popover button:hover { background: #f7f5ef; }
+.topbar-popover p { padding: 0 8px; color: #7c8598; }
 
 .connectivity-banner {
     margin: 0 0 var(--space-4);

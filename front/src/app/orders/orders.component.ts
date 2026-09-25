@@ -2855,6 +2855,12 @@ export class OrdersComponent implements OnInit, OnDestroy {
   };
 
   ngOnInit() {
+    const entry = this.route.snapshot.queryParamMap;
+    if (entry.get('view') === 'delivery') this.viewMode.set('delivery');
+    if (entry.get('view') === 'history') this.viewMode.set('history');
+    if (entry.get('create') === 'delivery' && this.canUpdateStatus()) {
+      this.openCreateDeliveryModal();
+    }
     this.tableScopeQuerySub = this.route.queryParamMap.subscribe(q => {
       const t = q.get('table');
       const id = t != null && t !== '' ? Number(t) : NaN;
