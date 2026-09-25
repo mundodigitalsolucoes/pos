@@ -31,6 +31,22 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
     <app-sidebar>
         <div class="page-header">
            <h1>Catálogo</h1>
+           <div class="catalog-links">
+             @if (tenantId(); as tenantId) {
+               <a [href]="'/public-menu/' + tenantId" target="_blank" rel="noopener noreferrer">Ver cardápio público ↗</a>
+             }
+             @if (canManageCatalog()) {
+               <details class="catalog-more"><summary>Mais recursos</summary>
+                 <a routerLink="/cardapio-online">Configurar cardápio online</a>
+                 <a routerLink="/cardapio/destaques">Destaques</a>
+                 <a routerLink="/cardapio/combos">Combos</a>
+                 <a routerLink="/promocoes">Cupons e promoções</a>
+                 <a routerLink="/fidelidade">Fidelidade</a>
+                 @if (moduleEnabled('providers')) { <a routerLink="/catalog">Catálogo de fornecedores</a> }
+                 @if (moduleEnabled('inventory')) { <a routerLink="/inventory">Estoque</a> }
+               </details>
+             }
+           </div>
            @if (activeTab() === 'products' && !showAddForm() && !editingProduct() && canEditProducts()) {
              <div class="page-header-actions">
              <button type="button" class="btn btn-secondary" (click)="openBulkImport()">
@@ -659,6 +675,8 @@ import { ProductBulkImportComponent } from './product-bulk-import.component';
 })
 export class ProductsComponent implements OnInit {
   private api = inject(ApiService);
+  tenantId = computed(() => this.api.getCurrentUser()?.tenant_id);
+  moduleEnabled = (key: 'providers' | 'inventory') => this.api.isUiModuleEnabled(key);
   private router = inject(Router);
   private permissions = inject(PermissionService);
   private translate = inject(TranslateService);

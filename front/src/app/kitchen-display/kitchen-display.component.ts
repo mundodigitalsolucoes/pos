@@ -101,6 +101,8 @@ const VIEW_CATEGORY: Record<string, string> = {
           {{ 'KITCHEN_DISPLAY.BACK_TO_ORDERS' | translate }}
         </a>
         <h1 class="kitchen-title">{{ pageTitle() }}</h1>
+        @if (viewMode() === 'kitchen') { <a routerLink="/bar" class="back-link">Exibição do bar →</a> }
+        @else { <a routerLink="/kitchen" class="back-link">Exibição da cozinha →</a> }
         <div class="header-actions">
           @if (stationsForCurrentView().length > 0) {
             <label class="station-filter">

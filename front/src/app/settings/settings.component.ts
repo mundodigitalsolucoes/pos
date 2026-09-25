@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import {
   ApiService,
@@ -39,6 +39,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
     CommonModule,
     FormsModule,
     SidebarComponent,
+    RouterLink,
     FocusFirstInputDirective,
     TranslateModule,
     TranslationsComponent,
@@ -55,6 +56,11 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
     <app-sidebar>
       <div class="page-header">
         <h1>{{ 'SETTINGS.TITLE' | translate }}</h1>
+        <details class="settings-more"><summary>Mais recursos</summary>
+          @if (api.isUiModuleEnabled('users')) { <a routerLink="/users">Equipe e acessos</a> }
+          @if (api.isUiModuleEnabled('contracts')) { <a routerLink="/contracts">Contratos</a> }
+          @if (api.isUiModuleEnabled('working_plan')) { <a routerLink="/working-plan">Escalas</a> }
+        </details>
       </div>
 
       <!-- Tab Navigation - Mobile First (horizontal scrollable tabs) -->
@@ -2942,7 +2948,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
   `]
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-  private api = inject(ApiService);
+  api = inject(ApiService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private translate = inject(TranslateService);

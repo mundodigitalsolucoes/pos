@@ -29,6 +29,13 @@
   gap: var(--space-2);
   align-items: center;
 }
+.catalog-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: .82rem; }
+.catalog-links a { color: #374B89; font-weight: 700; text-decoration: none; }
+.catalog-more { position: relative; }
+.catalog-more summary { color: #374B89; font-weight: 700; cursor: pointer; }
+.catalog-more[open] { z-index: 20; }
+.catalog-more a { display: block; padding: 8px 12px; background: white; white-space: nowrap; }
+.catalog-more[open] > a { border-left: 1px solid #e1e3ea; border-right: 1px solid #e1e3ea; }
 
 .btn-delete-all {
   color: var(--color-error, #dc2626);

@@ -3,12 +3,13 @@ import { Subscription } from 'rxjs';
 import { ApiService, Order } from '../services/api.service';
 import { AudioService } from '../services/audio.service';
 import { PermissionService } from '../services/permission.service';
+import { RouterLink } from '@angular/router';
 import { SidebarComponent } from '../shared/sidebar.component';
 
 @Component({
   selector: 'app-order-management',
   standalone: true,
-  imports: [SidebarComponent],
+  imports: [SidebarComponent, RouterLink],
   template: `
     <app-sidebar>
       <section class="orders-page">
@@ -21,6 +22,14 @@ import { SidebarComponent } from '../shared/sidebar.component';
           <div class="header-actions">
             <label class="order-search"><span class="sr-only">Pesquisar cliente ou número do pedido</span><input type="search" placeholder="Cliente ou nº do pedido" [value]="query()" (input)="query.set($any($event.target).value)" /></label>
             <a class="btn btn-secondary" href="/staff/orders">Visão detalhada</a>
+            <details class="related-tools"><summary>Mais recursos</summary>
+              @if (canViewTables() && moduleEnabled('tables')) { <a routerLink="/tables">Mesas</a> }
+              <a routerLink="/customers">Clientes</a>
+              @if (canViewReservations() && moduleEnabled('reservations')) {
+                <a routerLink="/reservations">Reservas</a>
+                <a routerLink="/guest-feedback">Avaliações</a>
+              }
+            </details>
             <button class="btn btn-primary" type="button" (click)="loadOrders()" [disabled]="loading()">
               {{ loading() ? 'Atualizando…' : 'Atualizar' }}
             </button>
@@ -192,6 +201,9 @@ export class OrderManagementComponent implements OnInit, OnDestroy {
 
   canUpdateStatus = computed(() => this.permissions.hasPermission(this.api.getCurrentUser(), 'order:update_status'));
   canCancel = computed(() => this.permissions.hasPermission(this.api.getCurrentUser(), 'order:cancel'));
+  canViewTables = computed(() => this.permissions.canAccessRoute(this.api.getCurrentUser(), '/tables'));
+  canViewReservations = computed(() => this.permissions.hasPermission(this.api.getCurrentUser(), 'reservation:read'));
+  moduleEnabled = (key: 'tables' | 'reservations') => this.api.isUiModuleEnabled(key);
   newOrders = computed(() => this.orders().filter(o => o.status === 'pending').sort((a,b) => a.id - b.id));
   preparingOrders = computed(() => this.orders().filter(o => o.status === 'preparing').sort((a,b) => a.id - b.id));
   readyOrders = computed(() => this.orders().filter(o => o.status === 'ready').sort((a,b) => a.id - b.id));

@@ -128,7 +128,7 @@
     &.active {
         color: var(--color-primary);
         background: var(--color-primary-light);
-        border-left-color: var(--color-primary);
+        border-left-color: #D6A92F;
     }
 
     svg {
@@ -258,6 +258,10 @@
     padding: var(--space-4) var(--space-5);
     border-top: 1px solid var(--color-border);
 }
+.footer-link, .account-menu a { display: block; padding: 7px 0; color: #374B89; text-decoration: none; font-size: .85rem; }
+.account-menu { margin-top: 6px; font-size: .85rem; }
+.account-menu summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #2F3453; font-weight: 600; }
+.account-menu app-language-picker { display: block; margin: 8px 0; }
 
 .user-info {
     margin-top: var(--space-4);
