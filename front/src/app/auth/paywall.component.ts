@@ -15,7 +15,7 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
       <div class="paywall-card">
         <div class="paywall-header">
           <div>
-            <p class="brand">Satisfecho</p>
+            <p class="brand">MDS Food</p>
             <h1>{{ 'PAYWALL.TITLE' | translate }}</h1>
             <p class="lead">{{ 'PAYWALL.LEAD' | translate }}</p>
           </div>
@@ -25,9 +25,13 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
         @if (loading()) {
           <p class="muted">{{ 'COMMON.LOADING' | translate }}</p>
         } @else if (sub(); as s) {
-          <div class="price-block" data-testid="paywall-price">
-            <span class="price">{{ formatPrice(s.price_cents, s.currency) }}</span>
-            <span class="period">{{ 'PAYWALL.PER_MONTH' | translate }}</span>
+          <div class="plan-options" data-testid="paywall-price">
+            @for (plan of s.plans ?? []; track plan.id) {
+              <label class="plan-option">
+                <input type="radio" name="saas-plan" [value]="plan.id" [checked]="selectedPlan() === plan.id" (change)="selectPlan(plan.id)" />
+                <span><strong>{{ plan.interval === 'year' ? 'Anual · R$ 77,90/mês' : 'Mensal' }}</strong><small>{{ formatPrice(plan.price_cents, plan.currency) }} {{ plan.interval === 'year' ? 'cobrados por ano' : 'por mês' }}</small></span>
+              </label>
+            }
           </div>
           <ul class="features">
             <li>{{ 'PAYWALL.FEATURE_TRIAL' | translate: { days: s.trial_days } }}</li>
@@ -50,7 +54,7 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
               >
                 {{ busy() ? ('COMMON.SAVING' | translate) : ('PAYWALL.START_TRIAL' | translate: { days: s.trial_days }) }}
               </button>
-              @if (s.stripe_checkout_available) {
+              @if (canCheckout(s)) {
                 <button
                   type="button"
                   class="btn-secondary"
@@ -64,6 +68,9 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
             } @else {
               <p class="success" data-testid="paywall-unlocked">{{ 'PAYWALL.ALREADY_ACCESS' | translate }}</p>
               <a routerLink="/dashboard" class="btn-primary btn-link">{{ 'PAYWALL.GO_DASHBOARD' | translate }}</a>
+              @if (s.status === 'trialing' && canCheckout(s)) {
+                <button type="button" class="btn-secondary" [disabled]="busy()" (click)="subscribe()">Escolher assinatura</button>
+              }
             }
           </div>
         }
@@ -127,6 +134,10 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
         gap: var(--space-2);
         margin-bottom: var(--space-5);
       }
+      .plan-options { display: grid; gap: .6rem; margin-bottom: var(--space-5); }
+      .plan-option { display: flex; gap: .8rem; padding: .85rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
+      .plan-option span { display: grid; gap: .25rem; }
+      .plan-option small { color: var(--color-text-muted); }
       .price {
         font-size: 2.25rem;
         font-weight: 700;
@@ -217,8 +228,18 @@ export class PaywallComponent implements OnInit {
   busy = signal(false);
   error = signal('');
   sub = signal<SaasSubscription | null>(null);
+  selectedPlan = signal<'hosted_standard' | 'hosted_annual'>('hosted_standard');
+
+  selectPlan(id: string): void {
+    if (id === 'hosted_standard' || id === 'hosted_annual') this.selectedPlan.set(id);
+  }
+
+  canCheckout(s: SaasSubscription): boolean {
+    return !!s.plans?.find(p => p.id === this.selectedPlan())?.stripe_checkout_available;
+  }
 
   ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('plan') === 'annual') this.selectedPlan.set('hosted_annual');
     const sessionId = this.route.snapshot.queryParamMap.get('session_id');
     if (sessionId) {
       this.busy.set(true);
@@ -268,10 +289,11 @@ export class PaywallComponent implements OnInit {
       return new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency: (currency || 'EUR').toUpperCase(),
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(cents / 100);
     } catch {
-      return `${(cents / 100).toFixed(0)} ${(currency || 'eur').toUpperCase()}`;
+      return `${(cents / 100).toFixed(2)} ${(currency || 'brl').toUpperCase()}`;
     }
   }
 
@@ -299,7 +321,7 @@ export class PaywallComponent implements OnInit {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const successUrl = `${origin}/paywall?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/paywall`;
-    this.api.createSaasCheckoutSession(successUrl, cancelUrl).subscribe({
+    this.api.createSaasCheckoutSession(successUrl, cancelUrl, this.selectedPlan()).subscribe({
       next: (res: { url: string }) => {
         this.busy.set(false);
         if (res.url) {

@@ -7,10 +7,12 @@ Hard paywall for **restaurant / tenant** signups (GitHub issue #296). After guid
 | Setting | Default | Notes |
 |---------|---------|--------|
 | `SAAS_PAYWALL_ENABLED` | `false` | Off for local/demo so existing workflows keep working. Enable in production when ready. Pass into the `back` container via `docker compose --env-file config.env` (compose maps `SAAS_*`); Puppeteer smoke: `npm run test:paywall --prefix front` (see `docs/testing.md`). |
-| `SAAS_TRIAL_DAYS` | `14` | Length of free trial. |
-| `SAAS_PLAN_PRICE_CENTS` | `4900` | Display price (€49 / month). |
-| `SAAS_PLAN_CURRENCY` | `eur` | Display + Stripe currency. |
+| `SAAS_TRIAL_DAYS` | `7` | Length of free trial. |
+| `SAAS_PLAN_PRICE_CENTS` | `9900` | Monthly subscription: R$ 99.00/month. |
+| `SAAS_ANNUAL_PRICE_CENTS` | `93480` | Annual subscription: R$ 934.80 charged yearly (equivalent to R$ 77.90/month). |
+| `SAAS_PLAN_CURRENCY` | `brl` | Display and validated Stripe currency. |
 | `SAAS_STRIPE_PRICE_ID` | empty | Optional Stripe Price ID. When set **and** `STRIPE_SECRET_KEY` is set, Checkout is offered. Without it, **Start free trial** still works (no card). |
+| `SAAS_STRIPE_ANNUAL_PRICE_ID` | empty | Stripe yearly recurring Price ID for exactly BRL 934.80. Monthly Price must be BRL 99.00 recurring every month. Incorrect prices block Checkout. |
 | `SAAS_STRIPE_WEBHOOK_SECRET` | empty | Stripe webhook signing secret (`whsec_…`) for `POST /saas/webhook`. Required to sync cancel / `past_due` / renewals without the browser. |
 | `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` | empty | Platform keys for SaaS Checkout (same env vars as order fallback). |
 
@@ -33,10 +35,10 @@ Columns on `tenant`:
 
 ## API
 
-- `GET /saas/config` — public plan flags (`enabled`, `trial_days`, `price_cents`, `currency`, `stripe_checkout_available`) plus a forward-compatible **`plans`** array (currently one `hosted_standard` tier with the same price/trial). Used by `/paywall`, signup, and the public **`/pricing`** page (#328).
+- `GET /saas/config` — public plan flags plus `plans[]`: `hosted_standard` (monthly) and `hosted_annual` (yearly total). Each plan reports its own Stripe Checkout availability.
 - `GET /saas/subscription` — current tenant status (auth)
 - `POST /saas/start-trial` — owner/admin; starts trial
-- `POST /saas/checkout-session` — Stripe Checkout URL when configured
+- `POST /saas/checkout-session` — Stripe Checkout URL when configured. Accepts `plan_id`, defaulting to `hosted_standard` for older clients. Server retrieves and validates the active Stripe Price, currency, amount and interval before creating Checkout.
 - `POST /saas/confirm-checkout` — after redirect with `session_id` (fast path)
 - `POST /saas/webhook` — Stripe billing webhook (signature via `SAAS_STRIPE_WEBHOOK_SECRET`); source of truth for subscription lifecycle
 

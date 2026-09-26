@@ -4,6 +4,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+from types import SimpleNamespace
 
 import stripe
 from fastapi import HTTPException
@@ -21,6 +22,7 @@ from app.saas_billing import (
     SAAS_STATUS_PAST_DUE,
     SAAS_STATUS_TRIALING,
     construct_saas_webhook_event,
+    create_checkout_session,
     initial_status_for_new_tenant,
     path_is_saas_exempt,
     plan_config,
@@ -56,6 +58,40 @@ def test_plan_config_includes_plans_catalog():
     assert hosted["trial_days"] == cfg["trial_days"]
     assert hosted["currency"] == cfg["currency"]
     assert hosted["interval"] == "month"
+    assert cfg["trial_days"] == 7
+    assert cfg["currency"] == "brl"
+    annual = cfg["plans"][1]
+    assert annual["id"] == "hosted_annual"
+    assert annual["interval"] == "year"
+    assert annual["price_cents"] == 93480
+
+
+def test_checkout_validates_configured_stripe_price_before_charging():
+    tenant = SimpleNamespace(id=12, saas_trial_ends_at=None, saas_subscription_status="none")
+    user = SimpleNamespace(id=7, email="test@example.com")
+    with patch("app.saas_billing.settings") as settings_mock, patch("app.saas_billing.stripe.Price.retrieve") as retrieve, patch("app.saas_billing.stripe.checkout.Session.create") as checkout:
+        settings_mock.saas_plan_price_cents = 9900
+        settings_mock.saas_annual_price_cents = 93480
+        settings_mock.saas_trial_days = 7
+        settings_mock.saas_plan_currency = "brl"
+        settings_mock.saas_stripe_price_id = "price_month"
+        settings_mock.saas_stripe_annual_price_id = "price_year"
+        settings_mock.stripe_secret_key = "sk_test_fake"
+        retrieve.return_value = {"active": True, "currency": "brl", "unit_amount": 93480, "recurring": {"interval": "year", "interval_count": 1}}
+        checkout.return_value = SimpleNamespace(url="https://checkout.stripe.com/test")
+        url = create_checkout_session(None, tenant, user, "https://example.com/success", "https://example.com/cancel", plan_id="hosted_annual")
+        assert url == "https://checkout.stripe.com/test"
+        assert checkout.call_args.kwargs["line_items"] == [{"price": "price_year", "quantity": 1}]
+        assert checkout.call_args.kwargs["subscription_data"]["trial_period_days"] == 7
+        assert checkout.call_args.kwargs["metadata"]["plan_id"] == "hosted_annual"
+        retrieve.return_value["unit_amount"] = 999999
+        try:
+            create_checkout_session(None, tenant, user, "https://example.com/success", "https://example.com/cancel", plan_id="hosted_annual")
+            assert False, "Expected mismatched price rejection"
+        except HTTPException as exc:
+            assert exc.status_code == 503
+            assert exc.detail["code"] == "saas_price_mismatch"
+        assert checkout.call_count == 1
 
 
 def test_saas_config_endpoint_returns_plans():

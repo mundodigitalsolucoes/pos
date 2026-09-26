@@ -134,10 +134,12 @@ def ensure_tenant_saas_access(session: Session, tenant_id: int | None) -> None:
 
 
 def plan_config() -> dict[str, Any]:
-    price_cents = int(getattr(settings, "saas_plan_price_cents", 4900) or 4900)
-    trial_days = int(getattr(settings, "saas_trial_days", 14) or 14)
-    currency = (getattr(settings, "saas_plan_currency", None) or "eur").lower()
+    price_cents = int(settings.saas_plan_price_cents)
+    annual_price_cents = int(settings.saas_annual_price_cents)
+    trial_days = int(settings.saas_trial_days)
+    currency = settings.saas_plan_currency.lower()
     price_id = (getattr(settings, "saas_stripe_price_id", None) or "").strip()
+    annual_price_id = (getattr(settings, "saas_stripe_annual_price_id", None) or "").strip()
     secret = (settings.stripe_secret_key or "").strip()
     # Flat top-level fields stay for paywall/signup; `plans` is the forward-compatible catalog.
     hosted_standard = {
@@ -146,6 +148,15 @@ def plan_config() -> dict[str, Any]:
         "price_cents": price_cents,
         "currency": currency,
         "interval": "month",
+        "stripe_checkout_available": bool(secret and price_id),
+    }
+    hosted_annual = {
+        "id": "hosted_annual",
+        "trial_days": trial_days,
+        "price_cents": annual_price_cents,
+        "currency": currency,
+        "interval": "year",
+        "stripe_checkout_available": bool(secret and annual_price_id),
     }
     return {
         "enabled": paywall_enabled(),
@@ -153,7 +164,7 @@ def plan_config() -> dict[str, Any]:
         "price_cents": price_cents,
         "currency": currency,
         "stripe_checkout_available": bool(secret and price_id),
-        "plans": [hosted_standard],
+        "plans": [hosted_standard, hosted_annual],
     }
 
 
@@ -192,7 +203,7 @@ def start_trial(session: Session, tenant: models.Tenant) -> models.Tenant:
             detail={"code": "trial_already_active", "message": "Trial is already active."},
         )
     # One trial per tenant: do not restart after expiry
-    if tenant.saas_trial_ends_at is not None and status_val == SAAS_STATUS_TRIALING:
+    if tenant.saas_trial_ends_at is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -201,7 +212,7 @@ def start_trial(session: Session, tenant: models.Tenant) -> models.Tenant:
             },
         )
 
-    trial_days = int(getattr(settings, "saas_trial_days", 14) or 14)
+    trial_days = int(settings.saas_trial_days)
     now = datetime.now(timezone.utc)
     tenant.saas_subscription_status = SAAS_STATUS_TRIALING
     tenant.saas_trial_ends_at = now + timedelta(days=trial_days)
@@ -217,9 +228,14 @@ def create_checkout_session(
     user: models.User,
     success_url: str,
     cancel_url: str,
+    plan_id: str = "hosted_standard",
 ) -> str:
     cfg = plan_config()
-    if not cfg["stripe_checkout_available"]:
+    plans = {plan["id"]: plan for plan in cfg["plans"]}
+    if plan_id not in plans:
+        raise HTTPException(status_code=400, detail={"code": "invalid_plan", "message": "Unknown SaaS plan."})
+    plan = plans[plan_id]
+    if not plan["stripe_checkout_available"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -227,9 +243,25 @@ def create_checkout_session(
                 "message": "Platform Stripe is not configured for SaaS checkout.",
             },
         )
-    price_id = settings.saas_stripe_price_id.strip()
+    price_id = (settings.saas_stripe_annual_price_id if plan_id == "hosted_annual" else settings.saas_stripe_price_id).strip()
     secret = settings.stripe_secret_key.strip()
     trial_days = int(cfg["trial_days"])
+
+    # Stripe Price is the charge authority. Never silently bill a different amount
+    # or interval from the published offer because of an incorrect environment ID.
+    try:
+        stripe_price = stripe.Price.retrieve(price_id, api_key=secret)
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail={"code": "stripe_error", "message": str(e.user_message or e)}) from e
+    recurring = _obj_get(stripe_price, "recurring")
+    if (
+        _obj_get(stripe_price, "active") is not True
+        or _obj_get(stripe_price, "currency", "").lower() != plan["currency"]
+        or _obj_get(stripe_price, "unit_amount") != plan["price_cents"]
+        or _obj_get(recurring, "interval") != plan["interval"]
+        or _obj_get(recurring, "interval_count", 1) != 1
+    ):
+        raise HTTPException(status_code=503, detail={"code": "saas_price_mismatch", "message": "Configured subscription price does not match the published plan."})
 
     # Offer trial in Checkout only if tenant has never started one.
     # Always attach tenant_id on the Subscription so billing webhooks can resolve the tenant.
@@ -237,6 +269,7 @@ def create_checkout_session(
         "metadata": {
             "tenant_id": str(tenant.id),
             "user_id": str(user.id),
+            "plan_id": plan_id,
         },
     }
     if tenant.saas_trial_ends_at is None and (
@@ -255,6 +288,7 @@ def create_checkout_session(
             "metadata": {
                 "tenant_id": str(tenant.id),
                 "user_id": str(user.id),
+                "plan_id": plan_id,
             },
             "subscription_data": subscription_data,
             "api_key": secret,

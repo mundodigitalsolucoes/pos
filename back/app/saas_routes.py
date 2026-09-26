@@ -25,6 +25,7 @@ router = APIRouter()
 class CheckoutBody(BaseModel):
     success_url: str = Field(min_length=8, max_length=2048)
     cancel_url: str = Field(min_length=8, max_length=2048)
+    plan_id: str = Field(default="hosted_standard", pattern="^(hosted_standard|hosted_annual)$")
 
 
 class ConfirmCheckoutBody(BaseModel):
@@ -96,6 +97,7 @@ def post_checkout_session(
         current_user,
         success_url=body.success_url.strip(),
         cancel_url=body.cancel_url.strip(),
+        plan_id=body.plan_id,
     )
     return {"url": url}
 

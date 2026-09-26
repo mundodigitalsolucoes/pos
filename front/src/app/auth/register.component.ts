@@ -280,7 +280,11 @@ export class RegisterComponent implements OnInit {
   onPhotoSelected(productId: number, event: Event): void { const input=event.target as HTMLInputElement; const file=input.files?.[0]; if(file)this.pendingPhotos.set(productId,file); else this.pendingPhotos.delete(productId); }
   publicMenuUrl(): string { const id=this.tenantId(); if(!id)return ''; if(typeof window==='undefined')return `/public-menu/${id}`; return `${window.location.origin}/public-menu/${id}`; }
   finishCtaKey(): string { return this.paywallEnabled()?'AUTH.SIGNUP_CONTINUE_PAYWALL':'AUTH.SIGNUP_GO_DASHBOARD'; }
-  finishSignup(): void { void this.router.navigate([this.paywallEnabled()?'/paywall':'/dashboard']); }
+  finishSignup(): void {
+    const plan = this.route.snapshot.queryParamMap.get('plan');
+    const queryParams = plan === 'annual' || plan === 'monthly' ? { plan } : {};
+    void this.router.navigate([this.paywallEnabled()?'/paywall':'/dashboard'], { queryParams });
+  }
 
   private continueAfterAccountLogin(): void {
     const credential = this.googleCredential();

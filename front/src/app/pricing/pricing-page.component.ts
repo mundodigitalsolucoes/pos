@@ -72,13 +72,14 @@ import { LandingSiteFooterComponent } from '../shared/landing-site-footer.compon
 
             @for (plan of plans(); track plan.id) {
               <article class="pricing-card" [attr.data-plan-id]="plan.id" data-testid="pricing-plan-card">
-                <h2 class="pricing-card__name">{{ 'PRICING_PAGE.HOSTED_NAME' | translate }}</h2>
+                <h2 class="pricing-card__name">MDS Food {{ plan.interval === 'year' ? 'anual' : 'mensal' }}</h2>
                 <p class="pricing-card__lede">{{ 'PRICING_PAGE.HOSTED_LEDE' | translate }}</p>
 
                 <div class="pricing-card__price" data-testid="pricing-price">
-                  <span class="pricing-card__amount">{{ formatPrice(plan.price_cents, plan.currency) }}</span>
-                  <span class="pricing-card__period">{{ 'PRICING_PAGE.PER_MONTH' | translate }}</span>
+                  <span class="pricing-card__amount">{{ formatPrice(plan.interval === 'year' ? plan.price_cents / 12 : plan.price_cents, plan.currency) }}</span>
+                  <span class="pricing-card__period">por mês {{ plan.interval === 'year' ? 'no plano anual' : '' }}</span>
                 </div>
+                @if (plan.interval === 'year') { <p>{{ formatPrice(plan.price_cents, plan.currency) }} cobrados por ano.</p> }
 
                 <p class="pricing-card__trial" data-testid="pricing-trial">
                   {{ 'PRICING_PAGE.TRIAL_LINE' | translate: { days: plan.trial_days } }}
@@ -102,7 +103,7 @@ import { LandingSiteFooterComponent } from '../shared/landing-site-footer.compon
                   <li>{{ 'PRICING_PAGE.INCLUDE_LOYALTY' | translate }}</li>
                 </ul>
 
-                <a routerLink="/register" class="pricing-btn pricing-btn--primary" data-testid="pricing-cta-register">
+                <a routerLink="/register" [queryParams]="{ plan: plan.interval === 'year' ? 'annual' : 'monthly' }" class="pricing-btn pricing-btn--primary" data-testid="pricing-cta-register">
                   {{ 'PRICING_PAGE.CTA_START' | translate }}
                 </a>
               </article>
@@ -527,7 +528,7 @@ export class PricingPageComponent implements OnInit {
         id: p.id || 'hosted_standard',
         trial_days: p.trial_days,
         price_cents: p.price_cents,
-        currency: p.currency || 'eur',
+        currency: p.currency || 'brl',
         interval: p.interval || 'month',
       }));
     }
@@ -536,7 +537,7 @@ export class PricingPageComponent implements OnInit {
         id: 'hosted_standard',
         trial_days: cfg.trial_days,
         price_cents: cfg.price_cents,
-        currency: cfg.currency || 'eur',
+        currency: cfg.currency || 'brl',
         interval: 'month',
       },
     ];
@@ -547,10 +548,11 @@ export class PricingPageComponent implements OnInit {
       return new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency: (currency || 'EUR').toUpperCase(),
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(cents / 100);
     } catch {
-      return `${(cents / 100).toFixed(0)} ${(currency || 'eur').toUpperCase()}`;
+      return `${(cents / 100).toFixed(2)} ${(currency || 'brl').toUpperCase()}`;
     }
   }
 }

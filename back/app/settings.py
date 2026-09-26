@@ -73,13 +73,22 @@ class Settings(BaseSettings):
         validation_alias="SAAS_PAYWALL_ENABLED",
         description="When true, new tenants must start a trial or paid plan before staff app access",
     )
-    saas_trial_days: int = Field(default=14, validation_alias="SAAS_TRIAL_DAYS")
+    saas_trial_days: int = Field(default=7, validation_alias="SAAS_TRIAL_DAYS")
     saas_plan_price_cents: int = Field(
-        default=4900,
+        default=9900,
         validation_alias="SAAS_PLAN_PRICE_CENTS",
-        description="Displayed monthly plan price in cents (e.g. 4900 = €49)",
+        description="Monthly subscription price in cents (9900 = R$ 99.00)",
     )
-    saas_plan_currency: str = Field(default="eur", validation_alias="SAAS_PLAN_CURRENCY")
+    saas_plan_currency: str = Field(default="brl", validation_alias="SAAS_PLAN_CURRENCY")
+    saas_annual_price_cents: int = Field(
+        default=93480,
+        validation_alias="SAAS_ANNUAL_PRICE_CENTS",
+        description="Total annual subscription price in cents (12 x R$ 77.90)",
+    )
+    saas_stripe_annual_price_id: str = Field(
+        default="", validation_alias="SAAS_STRIPE_ANNUAL_PRICE_ID",
+        description="Stripe recurring yearly Price ID for the platform subscription",
+    )
     saas_stripe_price_id: str = Field(
         default="",
         validation_alias="SAAS_STRIPE_PRICE_ID",
