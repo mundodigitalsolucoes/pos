@@ -36,6 +36,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError, OperationalError
 from sqlmodel import Session, select
 
 from . import models, security
+from . import br_address_service as br_address
 from .db import check_db_connection, create_db_and_tables, get_session, engine
 from .provider_images import (
     provider_product_image_url,
@@ -1253,19 +1254,67 @@ def get_public_satisfecho_delivery_config(
     postal = parse_delivery_postal_codes(getattr(tenant, "delivery_postal_codes", None))
     radius = getattr(tenant, "delivery_radius_meters", None)
     has_center = tenant.latitude is not None and tenant.longitude is not None
-    radius_active = (
-        radius is not None and int(radius) > 0 and has_center
-    )
+    radius_active = radius is not None and int(radius) > 0
     return {
         "delivery_fee_cents": tenant_delivery_fee_cents(tenant),
         "delivery_radius_meters": int(radius) if radius_active else None,
         "postal_codes_required": bool(postal),
         "postal_codes": postal if postal else [],
-        "restaurant_latitude": float(tenant.latitude) if radius_active else None,
-        "restaurant_longitude": float(tenant.longitude) if radius_active else None,
+        "restaurant_latitude": float(tenant.latitude) if radius_active and has_center else None,
+        "restaurant_longitude": float(tenant.longitude) if radius_active and has_center else None,
         "currency_code": tenant.currency_code,
         "currency": tenant.currency,
+        "country_code": tenant.country_code,
     }
+
+
+@app.get("/public/address/cep/{cep}", tags=["Public"])
+@public_menu_ip_limit()
+def public_address_cep(request: Request, response: Response, cep: str) -> dict:
+    try:
+        return br_address.lookup_cep(cep)
+    except br_address.AddressError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except br_address.AddressUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class _DeliveryAddressLookup(_BaseModel):
+    postal_code: str
+    street: str
+    number: str
+    complement: str = ""
+    neighborhood: str
+    city: str
+    state_code: str
+
+
+@app.post("/public/tenants/{tenant_id}/delivery-address/coverage", tags=["Public"])
+@public_menu_ip_limit()
+def public_delivery_address_coverage(
+    request: Request, response: Response, tenant_id: int,
+    body: _DeliveryAddressLookup, session: Session = Depends(get_session),
+) -> dict:
+    tenant = session.get(models.Tenant, tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    from app.delivery_order_service import validate_delivery_coverage
+    if (tenant.delivery_radius_meters or 0) > 0 and (tenant.latitude is None or tenant.longitude is None):
+        return {"address": "", "latitude": None, "longitude": None,
+                "covered": False, "reason": "restaurant_location_required"}
+    try:
+        address = br_address.full_address(body.model_dump())
+        br_address.verify_cep(body.model_dump())
+        coordinates = (br_address.geocode(body.model_dump())
+                       if (tenant.delivery_radius_meters or 0) > 0 else (None, None))
+    except br_address.AddressError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except br_address.AddressUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    error = validate_delivery_coverage(tenant, postal_code=body.postal_code,
+                                       delivery_latitude=coordinates[0], delivery_longitude=coordinates[1])
+    return {"address": address, "latitude": coordinates[0], "longitude": coordinates[1],
+            "covered": error is None, "reason": error}
 
 
 @app.get(
@@ -3948,9 +3997,40 @@ def update_tenant_settings(
     if tenant_update.email is not None:
         tenant.email = tenant_update.email.strip() if tenant_update.email else None
     if tenant_update.address is not None:
+        if tenant_update.address.strip() != (tenant.address or "") and not any(field in tenant_update.model_fields_set for field in ("address_postal_code", "address_street", "address_number", "address_neighborhood", "address_city", "address_state_code")):
+            if (tenant.delivery_radius_meters or 0) > 0:
+                raise HTTPException(status_code=400, detail="Atualize o endereço estruturado para recalcular a área de entrega.")
+            if tenant.address_postal_code:
+                tenant.latitude = tenant.longitude = None
         tenant.address = (
             tenant_update.address.strip() if tenant_update.address else None
         )
+    address_fields = {
+        "address_postal_code": "postal_code", "address_street": "street",
+        "address_number": "number", "address_complement": "complement",
+        "address_neighborhood": "neighborhood", "address_city": "city",
+        "address_state_code": "state_code",
+    }
+    if any(field in tenant_update.model_fields_set for field in address_fields):
+        address_data = {
+            key: (getattr(tenant_update, field) if field in tenant_update.model_fields_set else getattr(tenant, field))
+            for field, key in address_fields.items()
+        }
+        try:
+            formatted_address = br_address.full_address(address_data)
+            br_address.verify_cep(address_data)
+            lat, lon = br_address.geocode(address_data)
+        except br_address.AddressError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except br_address.AddressUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        for field, key in address_fields.items():
+            value = address_data[key]
+            setattr(tenant, field, (str(value).strip() if value else None))
+        tenant.address_postal_code = br_address.normalize_cep(address_data["postal_code"])
+        tenant.address_state_code = str(address_data["state_code"]).upper().strip()
+        tenant.address = formatted_address
+        tenant.latitude, tenant.longitude = lat, lon
     if tenant_update.website is not None:
         tenant.website = (
             tenant_update.website.strip() if tenant_update.website else None
@@ -4391,6 +4471,8 @@ def update_tenant_settings(
                 detail="longitude must be a finite number between -180 and 180",
             )
         tenant.longitude = lon
+    if (tenant.delivery_radius_meters or 0) > 0 and (tenant.latitude is None or tenant.longitude is None):
+        raise HTTPException(status_code=400, detail="Precisamos localizar o endereço do estabelecimento antes de usar o raio de entrega.")
     if tenant_update.location_radius_meters is not None:
         r = tenant_update.location_radius_meters
         if r < 0:

@@ -20,6 +20,8 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD:-pos}
       - DB_NAME=${POSTGRES_DB:-pos}
       - REDIS_URL=redis://redis:6379
+      - BR_GEOCODER_URL=${BR_GEOCODER_URL:-https://nominatim.openstreetmap.org/search}
+      - BR_GEOCODER_USER_AGENT=${BR_GEOCODER_USER_AGENT:-MDSFood/1.0 (https://mdsfood.testesite.tech)}
       - SECRET_KEY=${SECRET_KEY:-CHANGE_THIS_IN_PRODUCTION}
       - STRIPE_CURRENCY=${STRIPE_CURRENCY:-usd}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:4200}

@@ -86,8 +86,7 @@ def validate_delivery_coverage(
         t_lat = getattr(tenant, "latitude", None)
         t_lon = getattr(tenant, "longitude", None)
         if t_lat is None or t_lon is None:
-            # Radius configured but restaurant has no center — skip radius check.
-            return None
+            return "restaurant_location_required"
         if delivery_latitude is None or delivery_longitude is None:
             return "delivery_location_required"
         try:

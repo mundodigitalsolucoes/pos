@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 from sqlmodel import Session
 
 from . import models
+from . import br_address_service as br_address
 from . import promo_service as promo_svc
 from .catalog_modifier_pricing import (
     CatalogModifierValidationError,
@@ -182,6 +183,22 @@ def create_public_catalog_checkout_impl(
     address = (body.delivery_address or "").strip()
     if not address:
         raise HTTPException(status_code=400, detail="delivery_address is required")
+    structured = {
+        "postal_code": body.postal_code, "street": body.delivery_street,
+        "number": body.delivery_number, "complement": body.delivery_complement,
+        "neighborhood": body.delivery_neighborhood, "city": body.delivery_city,
+        "state_code": body.delivery_state_code,
+    }
+    brazilian = tenant.country_code == "BR" or (not tenant.country_code and tenant.currency_code in (None, "BRL"))
+    if body.delivery_street or (brazilian and (tenant.delivery_radius_meters or 0) > 0):
+        try:
+            address = br_address.full_address(structured)
+            if brazilian:
+                br_address.verify_cep(structured)
+        except br_address.AddressError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except br_address.AddressUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     raw_phone = (body.customer_phone or "").strip()
     if not raw_phone:
@@ -191,11 +208,26 @@ def create_public_catalog_checkout_impl(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid customer_phone") from exc
 
+    from .delivery_order_service import parse_delivery_postal_codes, normalize_postal_code
+    allowed_postal = parse_delivery_postal_codes(tenant.delivery_postal_codes)
+    if allowed_postal and normalize_postal_code(body.postal_code) not in allowed_postal:
+        raise HTTPException(status_code=400, detail="Address is outside the delivery zone")
+
+    # Browser coordinates are advisory only. Resolve the actual delivery address here.
+    delivery_latitude = body.delivery_latitude
+    delivery_longitude = body.delivery_longitude
+    if brazilian and (tenant.delivery_radius_meters or 0) > 0 and tenant.latitude is not None and tenant.longitude is not None:
+        try:
+            delivery_latitude, delivery_longitude = br_address.geocode(structured)
+        except br_address.AddressError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except br_address.AddressUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
     coverage_err = validate_delivery_coverage(
         tenant,
         postal_code=body.postal_code,
-        delivery_latitude=body.delivery_latitude,
-        delivery_longitude=body.delivery_longitude,
+        delivery_latitude=delivery_latitude,
+        delivery_longitude=delivery_longitude,
     )
     coverage_messages = {
         "postal_code_required": "postal_code is required for delivery",
@@ -203,6 +235,7 @@ def create_public_catalog_checkout_impl(
         "delivery_location_required": "Delivery location is required to check delivery radius",
         "delivery_location_invalid": "Invalid delivery location",
         "outside_delivery_radius": "Address is outside the delivery radius",
+        "restaurant_location_required": "Restaurant location is required to check delivery radius",
     }
     if coverage_err:
         raise HTTPException(status_code=400, detail=coverage_messages.get(coverage_err, str(coverage_err)))
