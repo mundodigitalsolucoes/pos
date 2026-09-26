@@ -68,9 +68,6 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
             } @else {
               <p class="success" data-testid="paywall-unlocked">{{ 'PAYWALL.ALREADY_ACCESS' | translate }}</p>
               <a routerLink="/dashboard" class="btn-primary btn-link">{{ 'PAYWALL.GO_DASHBOARD' | translate }}</a>
-              @if (s.status === 'trialing' && canCheckout(s)) {
-                <button type="button" class="btn-secondary" [disabled]="busy()" (click)="subscribe()">Escolher assinatura</button>
-              }
             }
           </div>
         }
