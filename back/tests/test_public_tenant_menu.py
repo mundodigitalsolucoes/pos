@@ -276,6 +276,27 @@ class TestPublicTenantMenu(PgClientTestCase):
         product = response.json()["categories"][0]["products"][0]
         self.assertIsNone(product["image_url"])
 
+    def test_tenant_product_uses_linked_product_image(self):
+        from app.public_tenant_menu import _UPLOADS_DIR
+
+        filename = "linked-image.jpg"
+        dest = _UPLOADS_DIR / str(self.tenant.id) / "products" / filename
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"fake-image")
+        self.addCleanup(lambda: dest.unlink(missing_ok=True))
+        linked = models.Product(tenant_id=self.tenant.id, name="Linked", price_cents=500, image_filename=filename)
+        catalog = models.ProductCatalog(name="Linked Catalog", category="Main Course")
+        self.session.add(linked)
+        self.session.add(catalog)
+        self.session.commit()
+        self.session.add(models.TenantProduct(tenant_id=self.tenant.id, catalog_id=catalog.id, product_id=linked.id, name="Linked", price_cents=500, is_active=True))
+        self.session.commit()
+
+        response = self.client.get(f"/public/tenants/{self.tenant.id}/menu")
+        self.assertEqual(response.status_code, 200, response.text)
+        product = response.json()["categories"][0]["products"][0]
+        self.assertEqual(product["image_url"], f"/uploads/{self.tenant.id}/products/{filename}")
+
     def test_product_image_url_for_tenant_upload_when_file_exists(self):
         from pathlib import Path
 
