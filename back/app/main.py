@@ -30,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel as _BaseModel, Field
 from sqlalchemy import event, exists, or_
 from sqlalchemy.exc import IntegrityError, InvalidRequestError, OperationalError, StatementError
@@ -5474,7 +5475,9 @@ async def upload_tenant_header_background(
             detail=f"File too large. Max size: {MAX_IMAGE_SIZE // (1024 * 1024)}MB",
         )
 
-    contents = optimize_image(contents, content_type)
+    # Raster optimization is CPU-bound; running it on the async event loop can
+    # stall other requests, including the response awaited by this upload UI.
+    contents = await run_in_threadpool(optimize_image, contents, content_type)
 
     tenant_dir = UPLOADS_DIR / str(current_user.tenant_id) / "header"
     tenant_dir.mkdir(parents=True, exist_ok=True)
