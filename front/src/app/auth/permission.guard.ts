@@ -15,7 +15,6 @@ export function permissionGuard(...permissions: Permission[]): CanActivateFn {
       try {
         user = await firstValueFrom(api.checkAuth());
       } catch {
-        router.navigate(['/login']);
         return false;
       }
     }

@@ -86,18 +86,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         // GET /users/me is intentionally NOT excluded: after the short-lived access token expires,
         // route guards use this endpoint to restore the cached user. Letting it participate in the
         // refresh flow keeps an otherwise valid refresh-token session alive after an idle tab.
-        const isAuthEndpoint = req.url.includes('/refresh') ||
-          req.url.includes('/token') ||
-          req.url.includes('/logout');
+        const endpoint = req.url.split('?')[0].replace(/\/$/, '');
+        const isAuthEndpoint = ['/refresh', '/token', '/token/otp', '/logout'].some(
+          path => endpoint.endsWith(path)
+        );
 
         if (isAuthEndpoint) {
-          // Auth endpoint itself failed - logout
-          const loginPath = loginPathForCurrentRoute(router.url);
-          apiService.logout().subscribe(() => {
-            if (!router.url.startsWith(loginPath)) {
-              router.navigate([loginPath]);
-            }
-          });
+          // The caller handles an invalid refresh or login; never revoke on a WS credential failure.
           return throwError(() => error);
         }
 
@@ -107,25 +102,25 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           refreshResult$ = new ReplaySubject<boolean>(1);
 
           return apiService.refreshToken().pipe(
+            // Catch only refresh failures. An error on the retried request does not
+            // mean the refresh cookie is invalid.
+            catchError((refreshError: HttpErrorResponse) => {
+              isRefreshing = false;
+              refreshResult$.next(false);
+              refreshResult$.complete();
+              if (refreshError.status === 401 || refreshError.status === 403) {
+                const loginPath = loginPathForCurrentRoute(router.url);
+                apiService.logout().subscribe(() => {
+                  if (!router.url.startsWith(loginPath)) void router.navigate([loginPath]);
+                });
+              }
+              return throwError(() => refreshError);
+            }),
             switchMap(() => {
               isRefreshing = false;
               refreshResult$.next(true);
               refreshResult$.complete();
-              // Retry the original request with fresh token
-              return next(req.clone({ withCredentials: true }));
-            }),
-            catchError((refreshError) => {
-              isRefreshing = false;
-              refreshResult$.next(false);
-              refreshResult$.complete();
-              // Refresh failed - logout and redirect to login
-              const loginPath = loginPathForCurrentRoute(router.url);
-              apiService.logout().subscribe(() => {
-                if (!router.url.startsWith(loginPath)) {
-                  router.navigate([loginPath]);
-                }
-              });
-              return throwError(() => refreshError);
+              return next(req);
             })
           );
         } else {

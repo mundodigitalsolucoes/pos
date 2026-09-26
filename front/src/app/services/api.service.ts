@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import {
   Observable,
   BehaviorSubject,
@@ -11,6 +11,8 @@ import {
   finalize,
   filter,
   take,
+  switchMap,
+  throwError,
 } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { LanguageService } from './language.service';
@@ -254,9 +256,30 @@ export class ApiService {
   private http=inject(HttpClient); private language=inject(LanguageService); private apiUrl=environment.apiUrl; private wsUrl=environment.wsUrl;
   private userSubject=new BehaviorSubject<User|null>(null); private authInitialCheckDone$=new BehaviorSubject<boolean>(false); workingPlanHasUpdates=signal(false); private tenantUiModulesResolved=signal(false); tenantUiModules=signal<Record<TenantUiModuleKey,boolean>>({...DEFAULT_TENANT_UI_MODULES}); tenantDisplayName=signal<string|null>(null); private orderUpdates=new Subject<any>(); private reservationUpdates=new Subject<any>(); private ws:WebSocket|null=null;
   user$=this.userSubject.asObservable(); orderUpdates$=this.orderUpdates.asObservable(); reservationUpdates$=this.reservationUpdates.asObservable();
-  constructor(){this.checkAuth().pipe(finalize(()=>this.authInitialCheckDone$.next(true))).subscribe();}
+  constructor(){this.checkAuth().pipe(finalize(()=>this.authInitialCheckDone$.next(true))).subscribe({error:()=>{}});}
   waitForInitialAuthCheck():Observable<void>{return this.authInitialCheckDone$.pipe(filter(Boolean),take(1),map(()=>void 0));}
-  checkAuth():Observable<User|null>{return this.http.get<User|null>(`${this.apiUrl}/users/me`).pipe(tap(user=>{const normalized=user?.role?{...user,role:String(user.role).toLowerCase() as UserRole}:user;this.userSubject.next(normalized??null);}),catchError(()=>{this.userSubject.next(null);return of(null);}));}
+  checkAuth():Observable<User|null>{
+    const readUser=()=>this.http.get<User|null>(`${this.apiUrl}/users/me`);
+    return readUser().pipe(
+      // /users/me intentionally returns 200 null when the access cookie expires.
+      // A valid refresh cookie must still restore the session after an idle tab or reload.
+      switchMap(user=>user?of(user):this.refreshToken().pipe(
+        switchMap(()=>readUser()),
+        catchError(error=>{
+          if(error instanceof HttpErrorResponse && (error.status===401 || error.status===403))return of(null);
+          return throwError(()=>error);
+        }),
+      )),
+      tap(user=>{const normalized=user?.role?{...user,role:String(user.role).toLowerCase() as UserRole}:user;this.userSubject.next(normalized??null);}),
+      catchError(error=>{
+        if(error instanceof HttpErrorResponse && (error.status===401 || error.status===403)){
+          this.userSubject.next(null);
+          return of(null);
+        }
+        return throwError(()=>error);
+      }),
+    );
+  }
   getCurrentUser():User|null{return this.userSubject.value;}
   register(data:any):Observable<RegisterResponse>{let params=new HttpParams();Object.keys(data).forEach(key=>{if(data[key]!==null&&data[key]!==undefined&&data[key]!=='')params=params.set(key,data[key]);});return this.http.post<RegisterResponse>(`${this.apiUrl}/register`,null,{params});}
   getGoogleAuthConfig():Observable<GoogleAuthConfig>{return this.http.get<GoogleAuthConfig>(`${this.apiUrl}/customer/auth/google/config`);}
@@ -268,7 +291,7 @@ export class ApiService {
   loginWithOtp(tempToken:string,code:string):Observable<any>{return this.http.post<any>(`${this.apiUrl}/token/otp`,{temp_token:tempToken,code}).pipe(tap(()=>this.checkAuth().subscribe()));}
   requestPasswordReset(email:string,tenantId?:number,scope?:'provider'){const params=new HttpParams().set('lang',this.language.getLanguage());return this.http.post<any>(`${this.apiUrl}/password-reset/request`,{email,tenant_id:tenantId??null,scope:scope??null},{params});} confirmPasswordReset(token:string,newPassword:string){const params=new HttpParams().set('lang',this.language.getLanguage());return this.http.post<any>(`${this.apiUrl}/password-reset/confirm`,{token,new_password:newPassword},{params});}
   getOtpStatus(){return this.http.get<{otp_enabled:boolean}>(`${this.apiUrl}/users/me/otp/status`);} setupOtp(){return this.http.post<any>(`${this.apiUrl}/users/me/otp/setup`,{});} confirmOtp(code:string){return this.http.post<any>(`${this.apiUrl}/users/me/otp/confirm`,{code});} disableOtp(code:string){return this.http.post<any>(`${this.apiUrl}/users/me/otp/disable`,{code});}
-  registerProvider(data:ProviderRegisterData){return this.http.post<RegisterResponse>(`${this.apiUrl}/register/provider`,data);} updateProviderMe(data:ProviderUpdateData){return this.http.put<ProviderInfo>(`${this.apiUrl}/provider/me`,data);} logout(){this.userSubject.next(null);this.tenantUiModulesResolved.set(false);this.tenantUiModules.set({...DEFAULT_TENANT_UI_MODULES});this.tenantDisplayName.set(null);this.disconnectWebSocket();return this.http.post(`${this.apiUrl}/logout`,{}).pipe(catchError(()=>of(undefined)));} refreshToken(){return this.http.post(`${this.apiUrl}/refresh`,{},{withCredentials:true}).pipe(tap(()=>this.checkAuth().subscribe()));}
+  registerProvider(data:ProviderRegisterData){return this.http.post<RegisterResponse>(`${this.apiUrl}/register/provider`,data);} updateProviderMe(data:ProviderUpdateData){return this.http.put<ProviderInfo>(`${this.apiUrl}/provider/me`,data);} logout(){this.userSubject.next(null);this.tenantUiModulesResolved.set(false);this.tenantUiModules.set({...DEFAULT_TENANT_UI_MODULES});this.tenantDisplayName.set(null);this.disconnectWebSocket();return this.http.post(`${this.apiUrl}/logout`,{}).pipe(catchError(()=>of(undefined)));} refreshToken(){return this.http.post(`${this.apiUrl}/refresh`,{},{withCredentials:true});}
   getProviderMe(){return this.http.get<ProviderInfo>(`${this.apiUrl}/provider/me`);} getCourierMe(){return this.http.get<CourierInfo>(`${this.apiUrl}/courier/me`);} customerRegister(body:any){const params=new HttpParams().set('lang',this.language.getLanguage());return this.http.post<any>(`${this.apiUrl}/customer/register`,body,{params});} customerLogin(email:string,password:string){const params=new HttpParams().set('lang',this.language.getLanguage());return this.http.post<any>(`${this.apiUrl}/customer/token`,{email,password},{params,withCredentials:true});} customerLogout(){return this.http.post(`${this.apiUrl}/customer/logout`,{},{withCredentials:true}).pipe(catchError(()=>of(undefined)));} getCustomerMe(){return this.http.get<CustomerInfo>(`${this.apiUrl}/customer/me`,{withCredentials:true});} customerVerifyEmail(token:string){const params=new HttpParams().set('token',token).set('lang',this.language.getLanguage());return this.http.get<any>(`${this.apiUrl}/customer/verify-email`,{params});} customerResendVerification(email:string){const params=new HttpParams().set('lang',this.language.getLanguage());return this.http.post<any>(`${this.apiUrl}/customer/resend-verification`,{email},{params});} getCustomerOrders(){return this.http.get<{orders:CustomerOrderSummary[];count:number}>(`${this.apiUrl}/customer/orders`,{withCredentials:true});}
   getPlatformMe(){return this.http.get<PlatformInfo>(`${this.apiUrl}/platform/me`);} getPlatformMetrics(){return this.http.get<PlatformMetrics>(`${this.apiUrl}/platform/metrics`);} getPlatformTenants(){return this.http.get<PlatformTenantSummary[]>(`${this.apiUrl}/platform/tenants`);} getPlatformTenant(tenantId:number){return this.http.get<PlatformTenantDetail>(`${this.apiUrl}/platform/tenants/${tenantId}`);} getCourierOrders(){return this.http.get<CourierOrderSummary[]>(`${this.apiUrl}/courier/orders`);} getCourierOrder(orderId:number){return this.http.get<CourierOrderDetail>(`${this.apiUrl}/courier/orders/${orderId}`);} courierOrderAction(orderId:number,action:CourierOrderAction){return this.http.post<CourierOrderDetail>(`${this.apiUrl}/courier/orders/${orderId}/actions`,{action});}
   getProviderCatalog(search?:string){let params=new HttpParams();if(search)params=params.set('search',search);return this.http.get<ProviderCatalogItem[]>(`${this.apiUrl}/provider/catalog`,{params});} getProviderProducts(){return this.http.get<ProviderProductItem[]>(`${this.apiUrl}/provider/products`);} createProviderProduct(data:ProviderProductCreate){return this.http.post<ProviderProduct>(`${this.apiUrl}/provider/products`,data);} updateProviderProduct(id:number,data:Partial<ProviderProductUpdate>){return this.http.put<ProviderProduct>(`${this.apiUrl}/provider/products/${id}`,data);} deleteProviderProduct(id:number){return this.http.delete<any>(`${this.apiUrl}/provider/products/${id}`);} uploadProviderProductImage(productId:number,file:File){const fd=new FormData();fd.append('file',file);return this.http.post<any>(`${this.apiUrl}/provider/products/${productId}/image`,fd);}

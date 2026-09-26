@@ -30,8 +30,7 @@ export function roleGuard(allowedRoles: UserRole[]): CanActivateFn {
       try {
         user = await firstValueFrom(api.checkAuth());
       } catch {
-        // Not authenticated - redirect to login
-        router.navigate(['/login']);
+        // A transient connection error is not an expired session.
         return false;
       }
     }

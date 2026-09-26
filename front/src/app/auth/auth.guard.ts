@@ -54,6 +54,7 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   return apiService.checkAuth().pipe(
     switchMap((user) => afterAuth(user)),
-    catchError(() => of(router.createUrlTree(['/login']))),
+    // Temporary network/backend failures are not evidence of an expired session.
+    catchError(() => of(false)),
   );
 };

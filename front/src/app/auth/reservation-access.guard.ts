@@ -18,7 +18,6 @@ export const reservationAccessGuard: CanActivateFn = async () => {
     try {
       user = await firstValueFrom(api.checkAuth());
     } catch {
-      router.navigate(['/login']);
       return false;
     }
   }
