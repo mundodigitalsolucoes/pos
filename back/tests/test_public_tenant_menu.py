@@ -334,6 +334,9 @@ class TestFormatPublicPrice(unittest.TestCase):
     def test_ca_uses_comma(self):
         self.assertEqual(format_public_price(1250, "ca"), "12,50")
 
+    def test_pt_br_formats_brazilian_thousands_and_decimal(self):
+        self.assertEqual(format_public_price(125050, "pt-BR"), "1.250,50")
+
 
 if __name__ == "__main__":
     unittest.main()

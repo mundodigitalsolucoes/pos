@@ -77,3 +77,20 @@ def test_seed_starter_products_idempotent():
 
 def test_starter_products_constants():
     assert set(STARTER_PRODUCTS.keys()) == {"Coffee", "Coca Cola", "Water"}
+
+
+def test_new_brazilian_tenant_gets_portuguese_starter_names():
+    with Session(engine) as session:
+        user = _create_owner(session, f"onboarding-br-{uuid.uuid4().hex}@test.local")
+        tenant = session.get(models.Tenant, user.tenant_id)
+        assert tenant is not None
+        tenant.country_code = "BR"
+        session.add(tenant)
+        session.commit()
+
+        rows = seed_starter_products(session, tenant.id, [
+            {"name": "Coffee", "price_cents": 250, "enabled": True},
+            {"name": "Water", "price_cents": 0, "enabled": True},
+        ])
+        assert {row.name for row in rows} == {"Café", "Água"}
+        assert all(row.category == "Bebidas" for row in rows)

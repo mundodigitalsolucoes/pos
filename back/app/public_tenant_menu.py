@@ -54,6 +54,8 @@ def format_public_price(price_cents: int, lang: str = "en") -> str:
     """Format cents as a decimal string (e.g. 250 -> '2,50' for es/ca)."""
     amount = price_cents / 100
     formatted = f"{amount:.2f}"
+    if lang.startswith("pt"):
+        return f"{amount:,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
     if lang.startswith(("es", "ca")):
         return formatted.replace(".", ",")
     return formatted

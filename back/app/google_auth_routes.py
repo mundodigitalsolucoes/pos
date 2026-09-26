@@ -20,6 +20,7 @@ from .google_auth import (
     verify_google_id_token,
 )
 from .onboarding import assign_maps_url
+from .mds_food_defaults import new_restaurant_locale
 from .rate_limits import limiter, rate_limit_key_user
 from .saas_billing import initial_status_for_new_tenant
 from .settings import settings
@@ -260,6 +261,7 @@ def signup_with_google(
         else:
             tenant = models.Tenant(
                 name=tenant_name,
+                **new_restaurant_locale(),
                 ui_modules=new_tenant_ui_modules_stored(),
                 saas_subscription_status=initial_status_for_new_tenant(),
             )

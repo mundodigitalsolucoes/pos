@@ -36,6 +36,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError, OperationalError
 from sqlmodel import Session, select
 
 from . import models, security
+from .mds_food_defaults import new_restaurant_locale
 from . import br_address_service as br_address
 from .db import check_db_connection, create_db_and_tables, get_session, engine
 from .provider_images import (
@@ -1361,6 +1362,9 @@ def get_public_delivery_order_status(
         "order_id": order.id,
         "tenant_id": order.tenant_id,
         "tenant_name": tenant.name if tenant else None,
+        "currency_code": normalize_tenant_currency_fields(
+            tenant.currency_code if tenant else None, tenant.currency if tenant else None
+        )[0],
         "status": customer_delivery_track_status(order, list(items)),
         "order_status": order.status.value if hasattr(order.status, "value") else str(order.status),
         "paid": order.paid_at is not None,
@@ -2534,6 +2538,7 @@ def register(
     else:
         tenant = models.Tenant(
             name=tenant_name,
+            **new_restaurant_locale(),
             ui_modules=new_tenant_ui_modules_stored(),
             saas_subscription_status=initial_status_for_new_tenant(),
         )

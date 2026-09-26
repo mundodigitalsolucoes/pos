@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session, select
 
-from .models import Product
+from .models import Product, Tenant
 
 # Default beverages offered during onboarding (name, price_cents, category).
 STARTER_PRODUCTS: dict[str, tuple[int, str]] = {
@@ -13,6 +13,8 @@ STARTER_PRODUCTS: dict[str, tuple[int, str]] = {
     "Coca Cola": (300, "Beverages"),
     "Water": (0, "Beverages"),
 }
+
+BR_STARTER_NAMES = {"Coffee": "Café", "Coca Cola": "Coca-Cola", "Water": "Água"}
 
 
 def assign_maps_url(tenant, maps_url: str | None) -> None:
@@ -37,6 +39,8 @@ def seed_starter_products(
     selections: [{"name": str, "price_cents": int, "enabled": bool}, ...]
     """
     known = set(STARTER_PRODUCTS.keys())
+    tenant = session.get(Tenant, tenant_id)
+    brazilian = tenant is not None and tenant.country_code == "BR"
     created_or_updated: list[Product] = []
 
     for item in selections:
@@ -45,6 +49,9 @@ def seed_starter_products(
             continue
         enabled = item.get("enabled", True)
         default_price, category = STARTER_PRODUCTS[name]
+        display_name = BR_STARTER_NAMES[name] if brazilian else name
+        if brazilian:
+            category = "Bebidas"
         price_cents = item.get("price_cents")
         if price_cents is None:
             price_cents = default_price
@@ -56,9 +63,13 @@ def seed_starter_products(
         existing = session.exec(
             select(Product).where(
                 Product.tenant_id == tenant_id,
-                Product.name == name,
+                Product.name == display_name,
             )
         ).first()
+        if not existing and display_name != name:
+            existing = session.exec(
+                select(Product).where(Product.tenant_id == tenant_id, Product.name == name)
+            ).first()
 
         if not enabled:
             if existing:
@@ -73,7 +84,7 @@ def seed_starter_products(
         else:
             product = Product(
                 tenant_id=tenant_id,
-                name=name,
+                name=display_name,
                 price_cents=price_cents,
                 category=category,
                 ingredients=None,
