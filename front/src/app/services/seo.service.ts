@@ -11,9 +11,9 @@ export interface SeoPageConfig {
 }
 
 const BRAND = 'MDS Food';
-const BRAND_TITLE = 'MDS Food - Soluções para seu restaurante.';
+const BRAND_TITLE = 'MDS Food | Cardápio Digital, Pedidos e Gestão para Restaurantes';
 const DEFAULT_DESCRIPTION =
-  'MDS Food é uma plataforma para restaurantes com cardápio digital, pedidos, reservas, mesas, cozinha, estoque, relatórios e gestão em um só lugar.';
+  'Cardápio digital, pedidos, PDV, cozinha, delivery e gestão em uma única plataforma. Conheça o MDS Food para restaurantes.';
 const OG_IMAGE_PATH = '/og-image.png';
 
 const MARKETING_PAGES: Record<string, Omit<SeoPageConfig, 'path'>> = {
