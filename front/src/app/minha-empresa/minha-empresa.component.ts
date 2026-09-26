@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout, finalize } from 'rxjs';
 import { ApiService, OpeningHoursBaselineRow, TenantSettings } from '../services/api.service';
 import { SidebarComponent } from '../shared/sidebar.component';
 import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upload-limits';
@@ -16,6 +16,7 @@ const DAYS: { key: Weekday; label: string }[] = [
   { key: 'friday', label: 'Sexta-feira' }, { key: 'saturday', label: 'Sábado' },
   { key: 'sunday', label: 'Domingo' },
 ];
+type DayGroup = 'all' | 'weekdays' | 'weekend';
 const FOOD_TYPES = [
   { value: 'restaurant', label: 'Restaurante' }, { value: 'pizzeria', label: 'Pizzaria' },
   { value: 'burger', label: 'Hamburgueria' }, { value: 'snack_bar', label: 'Lanchonete' },
@@ -62,6 +63,10 @@ export class MinhaEmpresaComponent implements OnInit {
   deliveryPostalCodes = '';
   hours: Record<Weekday, DayHours> = this.defaultHours();
   hoursDirty = false;
+  hoursGroup: DayGroup = 'weekdays';
+  groupOpen = '09:00';
+  groupClose = '18:00';
+  groupError = '';
   private readonly editedDays = new Set<Weekday>();
   private weeklySource: Record<string, unknown> = {};
   private activeBaseline: OpeningHoursBaselineRow | null = null;
@@ -110,7 +115,7 @@ export class MinhaEmpresaComponent implements OnInit {
     return Object.fromEntries(DAYS.map(d => [d.key, { closed: true, open: '09:00', close: '18:00' }])) as Record<Weekday, DayHours>;
   }
   private loadSchedule(settings: TenantSettings): void {
-    this.api.getOpeningHoursSchedule().subscribe({
+    this.api.getOpeningHoursSchedule().pipe(timeout(15000)).subscribe({
       next: schedule => {
         const effective = schedule.baselines.filter(b => b.effective_from <= this.today)
           .sort((a, b) => b.effective_from.localeCompare(a.effective_from));
@@ -153,6 +158,22 @@ export class MinhaEmpresaComponent implements OnInit {
     this.hoursDirty = true;
     this.editedDays.add(day);
     this.message.set('');
+  }
+  applyHoursGroup(): void {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.groupOpen) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(this.groupClose) || this.groupOpen >= this.groupClose) {
+      this.groupError = 'Confira o horário: o fechamento deve ser posterior à abertura.';
+      return;
+    }
+    if (this.scheduleLoading() || this.scheduleError()) return;
+    const selected = this.hoursGroup === 'all' ? DAYS : this.hoursGroup === 'weekdays' ? DAYS.slice(0, 5) : DAYS.slice(5);
+    for (const { key } of selected) {
+      const { hasBreak, morningOpen, morningClose, eveningOpen, eveningClose, ...previous } = this.hours[key];
+      this.hours[key] = { ...previous, closed: false, open: this.groupOpen, close: this.groupClose };
+      this.editedDays.add(key);
+    }
+    this.hoursDirty = true;
+    this.groupError = '';
+    this.message.set('Horário aplicado aos dias selecionados. Clique em Salvar alterações para confirmar.');
   }
   private serializedHours(): string {
     const result = { ...this.weeklySource };
@@ -265,9 +286,9 @@ export class MinhaEmpresaComponent implements OnInit {
     if (!allowed.includes(file.type) || file.size > MAX_IMAGE_UPLOAD_BYTES) { this.imageMessage.set(`Arquivo inválido. Use os formatos informados e até ${MAX_IMAGE_UPLOAD_MB} MB.`); return; }
     this.imageBusy.set(kind); this.imageMessage.set('');
     const request = kind === 'logo' ? this.api.uploadTenantLogo(file) : this.api.uploadTenantHeaderBackground(file);
-    request.subscribe({
-      next: s => { this.settings.set(s); this.imageBusy.set(null); this.imageMessage.set(kind === 'logo' ? 'Logo atualizada com sucesso.' : 'Capa atualizada com sucesso.'); },
-      error: () => { this.imageBusy.set(null); this.imageMessage.set('Não foi possível enviar a imagem. Tente novamente.'); },
+    request.pipe(timeout(90000), finalize(() => this.imageBusy.set(null))).subscribe({
+      next: s => { this.settings.set(s); this.imageMessage.set(kind === 'logo' ? 'Logo atualizada com sucesso.' : 'Capa atualizada com sucesso.'); },
+      error: err => { this.imageMessage.set(err?.name === 'TimeoutError' ? 'O envio demorou demais. Atualize a página para verificar se a imagem foi salva antes de tentar novamente.' : 'Não foi possível enviar a imagem. Tente novamente.'); },
     });
   }
   removeImage(kind: 'logo' | 'header'): void {

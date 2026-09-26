@@ -377,6 +377,43 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     return this.menu()?.currency?.trim() || '';
   }
 
+  openingHoursSummary(): string {
+    const raw = this.tenant()?.opening_hours;
+    if (!raw) return '';
+    let schedule: unknown;
+    try { schedule = JSON.parse(raw); } catch { return ''; }
+    if (!schedule || typeof schedule !== 'object' || Array.isArray(schedule)) return '';
+    const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+    const labels = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+    const time = (value: unknown): string | null => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : null;
+    const entries = weekdays.map(day => {
+      const value = (schedule as Record<string, unknown>)[day];
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+      const hours = value as Record<string, unknown>;
+      if (hours['closed'] === true) return 'fechado';
+      if (hours['hasBreak'] === true) {
+        const a = time(hours['morningOpen'] ?? hours['open']);
+        const b = time(hours['morningClose']);
+        const c = time(hours['eveningOpen']);
+        const d = time(hours['eveningClose'] ?? hours['close']);
+        return a && b && c && d && a < b && b <= c && c < d ? `${a}–${b}, ${c}–${d}` : null;
+      }
+      const a = time(hours['open']);
+      const b = time(hours['eveningClose'] ?? hours['close']);
+      return a && b && a < b ? `${a}–${b}` : null;
+    });
+    const parts: string[] = [];
+    for (let i = 0; i < entries.length;) {
+      const current = entries[i];
+      if (!current) { i++; continue; }
+      let end = i;
+      while (end + 1 < entries.length && entries[end + 1] === current) end++;
+      parts.push(`${labels[i]}${end > i ? `–${labels[end]}` : ''} ${current}`);
+      i = end + 1;
+    }
+    return parts.join(' · ');
+  }
+
   getLogoSafeUrl(url: string | null): SafeResourceUrl | string {
     return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : '';
   }

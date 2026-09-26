@@ -83,8 +83,8 @@
               @if (tenant()?.address?.trim()) {
                 <span><span aria-hidden="true">⌖</span>{{ tenant()!.address }}</span>
               }
-              @if (tenant()?.opening_hours?.trim()) {
-                <span><span aria-hidden="true">◷</span>{{ tenant()!.opening_hours }}</span>
+              @if (openingHoursSummary(); as hours) {
+                <span><span aria-hidden="true">◷</span>{{ hours }}</span>
               }
             </div>
           </div>
@@ -418,10 +418,10 @@
               </div>
             </div>
 
-            @if (tenant()?.opening_hours?.trim()) {
+            @if (openingHoursSummary(); as hours) {
               <section>
                 <h3>Horário</h3>
-                <p>{{ tenant()!.opening_hours }}</p>
+                <p>{{ hours }}</p>
               </section>
             }
 
