@@ -377,6 +377,41 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     return this.menu()?.currency?.trim() || '';
   }
 
+  openingHoursSummary(): string {
+    const raw = this.tenant()?.opening_hours?.trim();
+    if (!raw) return '';
+    try {
+      const parsed = JSON.parse(raw) as Record<string, any>;
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const locale = this.translate.currentLang || this.translate.defaultLang || 'pt-BR';
+      const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+      const dayLabel = (index: number) => formatter.format(new Date(2024, 0, 1 + index)).replace('.', '');
+      const closedLabel = locale.toLowerCase().startsWith('pt') ? 'fechado' : 'closed';
+      const entries = days.map((key, index) => {
+        const value = parsed[key];
+        if (!value || typeof value !== 'object') return null;
+        if (value.closed === true) return { label: dayLabel(index), schedule: closedLabel };
+        const schedule = value.hasBreak === true
+          ? `${value.morningOpen || value.open || ''}–${value.morningClose || ''}, ${value.eveningOpen || ''}–${value.eveningClose || value.close || ''}`
+          : `${value.open || ''}–${value.close || ''}`;
+        return { label: dayLabel(index), schedule };
+      });
+      const parts: string[] = [];
+      let i = 0;
+      while (i < entries.length) {
+        const current = entries[i];
+        if (!current) { i++; continue; }
+        let j = i + 1;
+        while (j < entries.length && entries[j]?.schedule === current.schedule) j++;
+        parts.push(j > i + 1 ? `${current.label}–${entries[j - 1]!.label} ${current.schedule}` : `${current.label} ${current.schedule}`);
+        i = j;
+      }
+      return parts.join(' · ');
+    } catch {
+      return raw.startsWith('{') || raw.startsWith('[') ? '' : raw;
+    }
+  }
+
   getLogoSafeUrl(url: string | null): SafeResourceUrl | string {
     return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : '';
   }
