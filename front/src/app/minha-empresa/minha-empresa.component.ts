@@ -6,6 +6,7 @@ import { ApiService, OpeningHoursBaselineRow, TenantSettings } from '../services
 import { SidebarComponent } from '../shared/sidebar.component';
 import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upload-limits';
 import { kmToMeters, reaisToCents } from './company-form-values';
+import { BrazilianAddress, BrazilianAddressService, addressComplete, emptyBrazilianAddress, maskCep, cepDigits } from '../shared/brazilian-address';
 
 type Weekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 type DayHours = { closed: boolean; open: string; close: string; hasBreak?: boolean; [key: string]: unknown };
@@ -37,6 +38,7 @@ const FOOD_TYPES = [
 })
 export class MinhaEmpresaComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly addressApi = inject(BrazilianAddressService);
   readonly days = DAYS;
   readonly foodTypes = FOOD_TYPES;
   readonly maxImageMb = MAX_IMAGE_UPLOAD_MB;
@@ -51,6 +53,10 @@ export class MinhaEmpresaComponent implements OnInit {
   readonly scheduleError = signal(false);
   readonly scheduleLoading = signal(true);
   draft: Partial<TenantSettings> = {};
+  address: BrazilianAddress = emptyBrazilianAddress();
+  addressEdited = false;
+  readonly cepStatus = signal('');
+  readonly locationStatus = signal('');
   deliveryFee = '0,00';
   deliveryRadius = '';
   deliveryPostalCodes = '';
@@ -71,6 +77,13 @@ export class MinhaEmpresaComponent implements OnInit {
           phone: settings.phone, whatsapp: settings.whatsapp, email: settings.email,
           website: settings.website, address: settings.address,
         };
+        this.address = {
+          postal_code: maskCep(settings.address_postal_code || ''), street: settings.address_street || '',
+          number: settings.address_number || '', complement: settings.address_complement || '',
+          neighborhood: settings.address_neighborhood || '', city: settings.address_city || '',
+          state_code: settings.address_state_code || '',
+        };
+        this.locationStatus.set(settings.latitude != null && settings.longitude != null ? 'Localização encontrada.' : 'Localização ainda não encontrada.');
         this.deliveryFee = (Number(settings.delivery_fee_cents ?? 0) / 100).toFixed(2).replace('.', ',');
         this.deliveryRadius = settings.delivery_radius_meters ? String(settings.delivery_radius_meters / 1000).replace('.', ',') : '';
         this.deliveryPostalCodes = this.postalCodesForForm(settings.delivery_postal_codes);
@@ -167,6 +180,24 @@ export class MinhaEmpresaComponent implements OnInit {
     return zone === 'America/Sao_Paulo' || (!zone && this.countryLabel === 'Brasil') ? 'Horário de Brasília' : zone || 'Não informado';
   }
 
+  addressChanged(): void { this.addressEdited = true; this.locationStatus.set('Localização será atualizada ao salvar.'); }
+  lookupCep(): void {
+    this.address.postal_code = maskCep(this.address.postal_code);
+    if (cepDigits(this.address.postal_code).length !== 8) {
+      this.cepStatus.set('CEP inválido. Informe oito dígitos.'); return;
+    }
+    this.cepStatus.set('Consultando CEP…');
+    this.addressApi.lookupCep(this.address.postal_code).subscribe({
+      next: result => {
+        this.address = { ...this.address, street: result.street || this.address.street,
+          neighborhood: result.neighborhood || this.address.neighborhood,
+          city: result.city || this.address.city, state_code: result.state_code || this.address.state_code };
+        this.addressChanged(); this.cepStatus.set('CEP encontrado. Confira os dados e informe o número.');
+      },
+      error: err => this.cepStatus.set(err.status === 400 ? 'CEP não encontrado. Confira os números.' : 'Consulta de CEP indisponível. Preencha os campos manualmente.'),
+    });
+  }
+
   async save(): Promise<void> {
     if (this.saving()) return;
     const name = this.draft.name?.trim();
@@ -174,6 +205,10 @@ export class MinhaEmpresaComponent implements OnInit {
     const fee = reaisToCents(this.deliveryFee);
     const radius = this.deliveryRadius.trim() ? kmToMeters(this.deliveryRadius) : 0;
     if (fee === null || radius === null) { this.message.set('Confira a taxa de entrega e o raio em quilômetros.'); return; }
+    if (this.addressEdited && !addressComplete(this.address)) { this.message.set('Confira o endereço: informe CEP, rua, número, bairro, cidade e UF.'); return; }
+    if (radius > 0 && !this.addressEdited && (this.settings()?.latitude == null || this.settings()?.longitude == null)) {
+      this.message.set('Precisamos localizar o endereço do estabelecimento antes de usar o raio de entrega. Preencha o endereço acima.'); return;
+    }
     if (this.hoursDirty && this.scheduleError()) { this.message.set('Não foi possível carregar os horários. Recarregue a página antes de salvá-los.'); return; }
     if (this.hoursDirty) {
       const valid = [...this.editedDays].every(key => {
@@ -188,10 +223,19 @@ export class MinhaEmpresaComponent implements OnInit {
       ...this.draft, name, delivery_fee_cents: fee, delivery_radius_meters: radius,
       delivery_postal_codes: this.deliveryPostalCodes.trim(),
     };
+    if (this.addressEdited) Object.assign(payload, {
+      address_postal_code: cepDigits(this.address.postal_code), address_street: this.address.street,
+      address_number: this.address.number, address_complement: this.address.complement,
+      address_neighborhood: this.address.neighborhood, address_city: this.address.city,
+      address_state_code: this.address.state_code.toUpperCase(),
+    });
     if (this.hoursDirty && !this.activeBaseline) payload.opening_hours = this.serializedHours();
     try {
       const updated = await firstValueFrom(this.api.updateTenantSettings(payload));
       this.settings.set(updated);
+      this.draft.address = updated.address;
+      this.addressEdited = false;
+      this.locationStatus.set(updated.latitude != null && updated.longitude != null ? 'Localização encontrada.' : 'Localização ainda não encontrada.');
       if (this.hoursDirty && this.activeBaseline) {
         const body = { effective_from: this.today, opening_hours: this.serializedHours() };
         if (this.todayBaseline) await firstValueFrom(this.api.updateOpeningHoursBaseline(this.todayBaseline.id, body));
@@ -204,8 +248,10 @@ export class MinhaEmpresaComponent implements OnInit {
       this.hoursDirty = false;
       this.editedDays.clear();
       this.message.set('Alterações salvas com sucesso.');
-    } catch {
-      this.message.set('Não foi possível salvar todas as alterações. Confira os campos e tente novamente; seus dados nesta tela foram mantidos.');
+    } catch (err: any) {
+      const detail = err?.error?.detail;
+      if (this.addressEdited) this.locationStatus.set(err?.status === 503 ? 'Falha temporária na localização. Tente novamente.' : 'Não foi possível localizar este endereço. Confira os campos.');
+      this.message.set(typeof detail === 'string' && detail.length < 200 ? detail : 'Não foi possível salvar todas as alterações. Confira os campos e tente novamente; seus dados nesta tela foram mantidos.');
     } finally { this.saving.set(false); }
   }
 

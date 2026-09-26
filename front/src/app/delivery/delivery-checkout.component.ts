@@ -13,7 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeStyle, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { merge } from 'rxjs';
+import { firstValueFrom, merge } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   ApiService,
@@ -29,6 +29,7 @@ import { LegalLinksComponent } from '../shared/legal-links.component';
 import { contactPhoneValid } from '../shared/contact-validators';
 import { productStockLeft } from '../shared/product-stock.util';
 import { PublicOrderCartService } from '../services/public-order-cart.service';
+import { BrazilianAddress, BrazilianAddressService, addressComplete, addressText, cepDigits, emptyBrazilianAddress, maskCep } from '../shared/brazilian-address';
 
 type CheckoutStep = 'menu' | 'cart' | 'address' | 'pay' | 'success';
 
@@ -49,6 +50,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   private title = inject(Title);
   private destroyRef = inject(DestroyRef);
   private orderCart = inject(PublicOrderCartService);
+  private addressApi = inject(BrazilianAddressService);
 
   tenantId = signal(0);
   tenant = signal<TenantSummary | null>(null);
@@ -66,12 +68,42 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   deliveryAddress = '';
   deliveryNotes = '';
   postalCode = '';
+  deliveryAddressFields: BrazilianAddress = emptyBrazilianAddress();
+  readonly cepStatus = signal('');
+  readonly addressStatus = signal('');
   formError = signal<string | null>(null);
   submitting = signal(false);
 
   deliveryConfig = signal<PublicSatisfechoDeliveryConfig | null>(null);
+  readonly brazilianDelivery = computed(() => this.deliveryConfig()?.country_code === 'BR' ||
+    (!this.deliveryConfig()?.country_code && (!this.deliveryConfig()?.currency_code ||
+      this.deliveryConfig()?.currency_code === 'BRL')));
   deliveryLat = signal<number | null>(null);
   deliveryLng = signal<number | null>(null);
+
+  addressChanged(): void {
+    this.addressStatus.set('');
+    this.deliveryLat.set(null);
+    this.deliveryLng.set(null);
+  }
+
+  lookupCep(): void {
+    const address = this.deliveryAddressFields;
+    address.postal_code = maskCep(address.postal_code);
+    if (cepDigits(address.postal_code).length !== 8) {
+      this.cepStatus.set('CEP inválido. Informe oito dígitos.'); return;
+    }
+    this.cepStatus.set('Consultando CEP…');
+    this.addressApi.lookupCep(address.postal_code).subscribe({
+      next: result => {
+        this.deliveryAddressFields = { ...address, street: result.street || address.street,
+          neighborhood: result.neighborhood || address.neighborhood,
+          city: result.city || address.city, state_code: result.state_code || address.state_code };
+        this.addressChanged(); this.cepStatus.set('CEP encontrado. Confira a rua e informe o número.');
+      },
+      error: err => this.cepStatus.set(err.status === 400 ? 'CEP não encontrado. Confira os números.' : 'Consulta de CEP indisponível. Preencha o endereço manualmente.'),
+    });
+  }
 
   orderId = signal<number | null>(null);
   publicOrderToken = signal<string | null>(null);
@@ -153,9 +185,6 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     this.api.getPublicSatisfechoDeliveryConfig(tid).subscribe({
       next: (cfg) => {
         this.deliveryConfig.set(cfg);
-        if (cfg.delivery_radius_meters) {
-          this.requestDeliveryLocation();
-        }
       },
       error: () => {
         this.deliveryConfig.set(null);
@@ -164,17 +193,46 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   }
 
   requestDeliveryLocation(): void {
+    if (this.brazilianDelivery()) { void this.checkAddress(); return; }
     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        this.deliveryLat.set(pos.coords.latitude);
-        this.deliveryLng.set(pos.coords.longitude);
-      },
-      () => {
-        /* optional; server rejects if radius configured and coords missing */
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 },
-    );
+    navigator.geolocation.getCurrentPosition(pos => {
+      this.deliveryLat.set(pos.coords.latitude);
+      this.deliveryLng.set(pos.coords.longitude);
+    }, () => this.formError.set('Não foi possível obter a localização.'),
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 });
+  }
+
+  private async checkAddress(): Promise<boolean> {
+    if (!addressComplete(this.deliveryAddressFields)) {
+      this.formError.set('Informe CEP, logradouro, número, bairro, cidade e UF para continuar.');
+      return false;
+    }
+    this.addressStatus.set('Localizando endereço…');
+    const submittedAddress = addressText(this.deliveryAddressFields);
+    try {
+      const result = await firstValueFrom(this.addressApi.checkCoverage(this.tenantId(), {
+        ...this.deliveryAddressFields, postal_code: cepDigits(this.deliveryAddressFields.postal_code),
+      }));
+      if (submittedAddress !== addressText(this.deliveryAddressFields)) {
+        this.addressStatus.set('Endereço alterado. Confira e tente novamente.');
+        return false;
+      }
+      if (!result.covered) {
+        this.addressStatus.set('Endereço fora da área de entrega.');
+        this.formError.set(result.reason === 'restaurant_location_required' ?
+          'O restaurante ainda não configurou a localização para entregas. Tente novamente mais tarde.' :
+          'Desculpe, ainda não entregamos neste endereço. Tente outro endereço para continuar.');
+        return false;
+      }
+      this.deliveryLat.set(result.latitude);
+      this.deliveryLng.set(result.longitude);
+      this.addressStatus.set('Endereço dentro da área de entrega.');
+      return true;
+    } catch (err: any) {
+      this.addressStatus.set(err?.status === 503 ? 'Falha temporária na localização.' : 'Não conseguimos localizar este endereço.');
+      this.formError.set(err?.status === 503 ? 'A consulta está temporariamente indisponível. Tente novamente.' : 'Não conseguimos localizar este endereço. Confira os dados e tente novamente.');
+      return false;
+    }
   }
 
   ngOnDestroy(): void {
@@ -316,31 +374,23 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     this.customerName = '';
     this.customerPhone = '';
     this.deliveryAddress = '';
+    this.deliveryAddressFields = emptyBrazilianAddress();
+    this.addressChanged();
     this.deliveryNotes = '';
     this.orderCart.clear();
     this.step.set('menu');
   }
 
-  submitAddress(): void {
+  async submitAddress(): Promise<void> {
     this.formError.set(null);
-    const address = this.deliveryAddress.trim();
+    const address = this.brazilianDelivery() ? addressText(this.deliveryAddressFields) : this.deliveryAddress.trim();
     const phone = this.customerPhone.trim();
-    const cfg = this.deliveryConfig();
-    if (!address) {
-      this.formError.set(this.translate.instant('DELIVERY_CHECKOUT.ADDRESS_REQUIRED'));
+    if (this.brazilianDelivery() && !addressComplete(this.deliveryAddressFields) || !this.brazilianDelivery() && !address) {
+      this.formError.set('Informe CEP, logradouro, número, bairro, cidade e UF para continuar.');
       return;
     }
     if (!phone || !contactPhoneValid(phone)) {
       this.formError.set(this.translate.instant('DELIVERY_CHECKOUT.PHONE_INVALID'));
-      return;
-    }
-    if (cfg?.postal_codes_required && !this.postalCode.trim()) {
-      this.formError.set(this.translate.instant('DELIVERY_CHECKOUT.POSTAL_REQUIRED'));
-      return;
-    }
-    if (cfg?.delivery_radius_meters && (this.deliveryLat() == null || this.deliveryLng() == null)) {
-      this.formError.set(this.translate.instant('DELIVERY_CHECKOUT.LOCATION_REQUIRED'));
-      this.requestDeliveryLocation();
       return;
     }
     if (this.cartCount() < 1) {
@@ -349,6 +399,10 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     }
 
     this.submitting.set(true);
+    if (this.brazilianDelivery()) {
+      if (!(await this.checkAddress())) { this.submitting.set(false); return; }
+      this.postalCode = cepDigits(this.deliveryAddressFields.postal_code);
+    }
     this.api
       .createPublicCatalogCheckout(this.tenantId(), {
         items: this.cart().map((l) => ({
@@ -361,6 +415,14 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
         customer_name: this.customerName.trim() || null,
         notes: this.deliveryNotes.trim() || null,
         postal_code: this.postalCode.trim() || null,
+        ...(this.brazilianDelivery() ? {
+          delivery_street: this.deliveryAddressFields.street,
+          delivery_number: this.deliveryAddressFields.number,
+          delivery_complement: this.deliveryAddressFields.complement,
+          delivery_neighborhood: this.deliveryAddressFields.neighborhood,
+          delivery_city: this.deliveryAddressFields.city,
+          delivery_state_code: this.deliveryAddressFields.state_code.toUpperCase(),
+        } : {}),
         delivery_latitude: this.deliveryLat(),
         delivery_longitude: this.deliveryLng(),
       })
@@ -384,9 +446,11 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
           let msg = this.translate.instant('DELIVERY_CHECKOUT.CREATE_FAILED');
           if (typeof detail === 'string') {
             if (detail.includes('outside the delivery zone')) {
-              msg = this.translate.instant('DELIVERY_CHECKOUT.OUTSIDE_ZONE');
+              msg = 'Desculpe, ainda não entregamos neste endereço. Tente outro endereço para continuar.';
             } else if (detail.includes('outside the delivery radius')) {
-              msg = this.translate.instant('DELIVERY_CHECKOUT.OUTSIDE_RADIUS');
+              msg = 'Desculpe, ainda não entregamos neste endereço. Tente outro endereço para continuar.';
+            } else if (detail.includes('Restaurant location')) {
+              msg = 'O restaurante ainda não configurou a localização para entregas.';
             } else if (detail.includes('postal_code')) {
               msg = this.translate.instant('DELIVERY_CHECKOUT.POSTAL_REQUIRED');
             } else if (detail.includes('location')) {

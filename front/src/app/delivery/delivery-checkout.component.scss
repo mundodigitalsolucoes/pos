@@ -16,6 +16,12 @@
 .delivery-checkout-page .btn-primary { background: #374b89; border-color: #374b89; }
 .delivery-checkout-page .btn-primary:hover { background: #2f3453; }
 
+.br-address-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+.br-address-grid label { min-width: 0; }
+.br-address-grid input { width: 100%; min-height: 2.8rem; }
+.br-address-wide { grid-column: 1 / -1; }
+@media (max-width: 520px) { .br-address-grid { grid-template-columns: 1fr; } }
+
 .delivery-shell {
   min-height: 60vh;
   padding: 1rem;

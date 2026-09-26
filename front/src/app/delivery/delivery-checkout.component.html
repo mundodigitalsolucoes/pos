@@ -196,6 +196,25 @@
               autocomplete="tel"
             />
           </label>
+          @if (brazilianDelivery()) {
+          <div class="br-address-grid">
+            <label>CEP *<input name="postal" [(ngModel)]="deliveryAddressFields.postal_code" (ngModelChange)="addressChanged()" (blur)="lookupCep()" inputmode="numeric" maxlength="9" autocomplete="postal-code" placeholder="00000-000" required /></label>
+            <p class="delivery-hint br-address-wide" role="status">{{ cepStatus() }}</p>
+            <label class="br-address-wide">Logradouro *<input name="street" [(ngModel)]="deliveryAddressFields.street" (ngModelChange)="addressChanged()" autocomplete="address-line1" required /></label>
+            <label>Número *<input name="number" [(ngModel)]="deliveryAddressFields.number" (ngModelChange)="addressChanged()" autocomplete="address-line2" required /></label>
+            <label>Complemento<input name="complement" [(ngModel)]="deliveryAddressFields.complement" (ngModelChange)="addressChanged()" /></label>
+            <label>Bairro *<input name="neighborhood" [(ngModel)]="deliveryAddressFields.neighborhood" (ngModelChange)="addressChanged()" required /></label>
+            <label>Cidade *<input name="city" [(ngModel)]="deliveryAddressFields.city" (ngModelChange)="addressChanged()" autocomplete="address-level2" required /></label>
+            <label>UF *<input name="state" [(ngModel)]="deliveryAddressFields.state_code" (ngModelChange)="addressChanged()" autocomplete="address-level1" maxlength="2" placeholder="SP" required /></label>
+          </div>
+          @if (deliveryConfig()?.postal_codes_required && deliveryConfig()?.postal_codes?.length) {
+            <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.POSTAL_HINT' | translate }}: {{ deliveryConfig()!.postal_codes.join(', ') }}</p>
+          }
+          @if (deliveryConfig()?.delivery_radius_meters) {
+            <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.RADIUS_HINT' | translate: { meters: deliveryConfig()!.delivery_radius_meters } }}</p>
+          }
+          <p class="delivery-hint" role="status">{{ addressStatus() }}</p>
+          } @else {
           <label>
             {{ 'DELIVERY_CHECKOUT.ADDRESS' | translate }} *
             <textarea
@@ -234,6 +253,7 @@
             <button type="button" class="btn btn-secondary btn-sm" (click)="requestDeliveryLocation()">
               {{ 'DELIVERY_CHECKOUT.SHARE_LOCATION' | translate }}
             </button>
+          }
           }
           @if ((deliveryConfig()?.delivery_fee_cents ?? 0) > 0) {
             <p class="delivery-hint">
