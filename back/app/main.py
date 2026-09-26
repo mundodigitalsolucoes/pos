@@ -4627,6 +4627,36 @@ def create_opening_hours_baseline(
     return {"id": row.id}
 
 
+@app.put("/tenant/opening-hours/baselines/{baseline_id}")
+@limiter.limit(
+    f"{getattr(settings, 'rate_limit_admin_per_minute', 30)}/minute",
+    key_func=_rate_limit_key_user,
+)
+def update_opening_hours_baseline(
+    baseline_id: int,
+    request: Request,
+    response: Response,
+    body: models.OpeningHoursBaselineCreate,
+    current_user: Annotated[models.User, Depends(require_permission(Permission.SETTINGS_UPDATE))],
+    session: Session = Depends(get_session),
+) -> dict:
+    """Edit this tenant's baseline without deleting its scheduled exceptions."""
+    row = session.exec(
+        select(models.OpeningHoursBaselineSchedule).where(
+            models.OpeningHoursBaselineSchedule.id == baseline_id,
+            models.OpeningHoursBaselineSchedule.tenant_id == current_user.tenant_id,
+        )
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Baseline not found")
+    if body.effective_from != row.effective_from:
+        raise HTTPException(status_code=400, detail="Baseline effective date cannot be changed")
+    row.opening_hours = _validate_weekly_opening_hours_json(body.opening_hours, required=True) or ""
+    session.add(row)
+    session.commit()
+    return {"id": row.id}
+
+
 @app.delete("/tenant/opening-hours/baselines/{baseline_id}")
 @limiter.limit(
     f"{getattr(settings, 'rate_limit_admin_per_minute', 30)}/minute",

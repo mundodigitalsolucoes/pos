@@ -68,6 +68,18 @@ class BusinessType(str, Enum):
     retail = "retail"
     service = "service"
     other = "other"
+    pizzeria = "pizzeria"
+    burger = "burger"
+    snack_bar = "snack_bar"
+    bakery = "bakery"
+    confectionery = "confectionery"
+    acai = "acai"
+    ice_cream = "ice_cream"
+    meal_delivery = "meal_delivery"
+    steakhouse = "steakhouse"
+    pastry_shop = "pastry_shop"
+    food_truck = "food_truck"
+    delivery = "delivery"
 
 
 class UserRole(str, Enum):
