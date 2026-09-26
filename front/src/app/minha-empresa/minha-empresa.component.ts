@@ -159,6 +159,19 @@ export class MinhaEmpresaComponent implements OnInit {
     this.editedDays.add(day);
     this.message.set('');
   }
+  formatDescription(input: HTMLTextAreaElement, style: 'bold' | 'italic' | 'list'): void {
+    const value = this.draft.description ?? '';
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selection = value.slice(start, end);
+    const before = style === 'list' ? (start > 0 && value[start - 1] !== '\n' ? '\n- ' : '- ') : style === 'bold' ? '**' : '_';
+    const after = style === 'list' ? '' : before;
+    this.draft.description = `${value.slice(0, start)}${before}${selection}${after}${value.slice(end)}`;
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(start + before.length, start + before.length + selection.length);
+    });
+  }
   applyHoursGroup(): void {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.groupOpen) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(this.groupClose) || this.groupOpen >= this.groupClose) {
       this.groupError = 'Confira o horário: o fechamento deve ser posterior à abertura.';
@@ -251,17 +264,19 @@ export class MinhaEmpresaComponent implements OnInit {
       address_state_code: this.address.state_code.toUpperCase(),
     });
     if (this.hoursDirty && !this.activeBaseline) payload.opening_hours = this.serializedHours();
+    let saveStep: 'dados' | 'horários' = 'dados';
     try {
-      const updated = await firstValueFrom(this.api.updateTenantSettings(payload));
+      const updated = await firstValueFrom(this.api.updateTenantSettings(payload).pipe(timeout(30000)));
       this.settings.set(updated);
       this.draft.address = updated.address;
       this.addressEdited = false;
       this.locationStatus.set(updated.latitude != null && updated.longitude != null ? 'Localização encontrada.' : 'Localização ainda não encontrada.');
       if (this.hoursDirty && this.activeBaseline) {
+        saveStep = 'horários';
         const body = { effective_from: this.today, opening_hours: this.serializedHours() };
-        if (this.todayBaseline) await firstValueFrom(this.api.updateOpeningHoursBaseline(this.todayBaseline.id, body));
+        if (this.todayBaseline) await firstValueFrom(this.api.updateOpeningHoursBaseline(this.todayBaseline.id, body).pipe(timeout(30000)));
         else {
-          const created = await firstValueFrom(this.api.createOpeningHoursBaseline(body));
+          const created = await firstValueFrom(this.api.createOpeningHoursBaseline(body).pipe(timeout(30000)));
           this.todayBaseline = { id: created.id, effective_from: this.today, opening_hours: body.opening_hours };
           this.activeBaseline = this.todayBaseline;
         }
@@ -270,9 +285,14 @@ export class MinhaEmpresaComponent implements OnInit {
       this.editedDays.clear();
       this.message.set('Alterações salvas com sucesso.');
     } catch (err: any) {
+      console.error(`Falha ao salvar ${saveStep} do estabelecimento`, err);
       const detail = err?.error?.detail;
       if (this.addressEdited) this.locationStatus.set(err?.status === 503 ? 'Falha temporária na localização. Tente novamente.' : 'Não foi possível localizar este endereço. Confira os campos.');
-      this.message.set(typeof detail === 'string' && detail.length < 200 ? detail : 'Não foi possível salvar todas as alterações. Confira os campos e tente novamente; seus dados nesta tela foram mantidos.');
+      this.message.set(saveStep === 'horários'
+        ? 'Os dados gerais foram salvos, mas os horários não foram confirmados. Atualize a página para conferir antes de tentar novamente.'
+        : err?.name === 'TimeoutError'
+        ? 'O servidor demorou para responder. Atualize a página e confira se as alterações foram salvas antes de tentar novamente.'
+        : typeof detail === 'string' && detail.length < 200 && err?.status === 400 ? detail : 'Não foi possível salvar todas as alterações. Confira os campos e tente novamente; seus dados nesta tela foram mantidos.');
     } finally { this.saving.set(false); }
   }
 

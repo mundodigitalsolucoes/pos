@@ -26,6 +26,8 @@ import { LanguagePickerComponent } from '../shared/language-picker.component';
 import { LanguageService } from '../services/language.service';
 import { LegalLinksComponent } from '../shared/legal-links.component';
 import { PublicOrderCartService } from '../services/public-order-cart.service';
+import { descriptionLines } from '../shared/restaurant-description';
+import { restaurantOpenStatus } from '../shared/restaurant-open-status';
 
 interface PublicCatalogMerchandising {
   product_id: number;
@@ -79,6 +81,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   cart = this.orderCart.lines;
   cartCount = this.orderCart.count;
   cartSubtotalCents = this.orderCart.subtotalCents;
+  readonly descriptionLines = descriptionLines;
   selectedProduct = signal<PublicTenantMenuProduct | null>(null);
   selectedModifiers = signal<Record<number, number[]>>({});
   customizationError = signal<string | null>(null);
@@ -377,6 +380,10 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     return this.menu()?.currency?.trim() || '';
   }
 
+  openStatus(): 'open' | 'closed' | null {
+    return restaurantOpenStatus(this.tenant()?.opening_hours, this.tenant()?.timezone);
+  }
+
   openingHoursSummary(): string {
     const raw = this.tenant()?.opening_hours;
     if (!raw) return '';
@@ -421,7 +428,7 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
   headerBackgroundStyle(): SafeStyle | null {
     const filename = this.tenant()?.header_background_filename;
     const tid = this.tenant()?.id;
-    if (!filename || tid == null) return null;
+    if (!filename || tid == null || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(filename) || filename.includes('..')) return null;
     const url = this.api.getTenantHeaderBackgroundUrl(filename, tid);
     return this.sanitizer.bypassSecurityTrustStyle(`url('${url}')`);
   }

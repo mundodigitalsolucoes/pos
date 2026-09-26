@@ -74,20 +74,28 @@
           <div class="store-identity-copy">
             <div class="store-title-row">
               <h1>{{ displayName() }}</h1>
-              <span class="store-status-pill store-status-neutral">Consulte o horário</span>
-            </div>
-            @if (tenant()?.description?.trim()) {
-              <p class="store-description">{{ tenant()!.description }}</p>
-            }
-            <div class="store-meta-list">
-              @if (tenant()?.address?.trim()) {
-                <span><span aria-hidden="true">⌖</span>{{ tenant()!.address }}</span>
-              }
-              @if (openingHoursSummary(); as hours) {
-                <span><span aria-hidden="true">◷</span>{{ hours }}</span>
-              }
+              @if (openStatus(); as status) {
+                <span class="store-status-pill" [class.store-status-open]="status === 'open'" [class.store-status-closed]="status === 'closed'">{{ status === 'open' ? 'Aberto agora' : 'Fechado agora' }}</span>
+              } @else { <span class="store-status-pill store-status-neutral">Consulte o horário</span> }
             </div>
           </div>
+        </div>
+        @if (tenant()?.description?.trim()) {
+          <div class="store-description" aria-label="Descrição do estabelecimento">
+            @for (line of descriptionLines(tenant()?.description); track $index) {
+              <div class="description-line" [class.description-list-item]="line.list">
+                @for (run of line.runs; track $index) {
+                  @if (run.emphasis === 'bold') { <strong>{{ run.text }}</strong> }
+                  @else if (run.emphasis === 'italic') { <em>{{ run.text }}</em> }
+                  @else { {{ run.text }} }
+                }
+              </div>
+            }
+          </div>
+        }
+        <div class="store-meta-list">
+          @if (tenant()?.address?.trim()) { <span><span aria-hidden="true">⌖</span>{{ tenant()!.address }}</span> }
+          @if (openingHoursSummary(); as hours) { <span><span aria-hidden="true">◷</span>{{ hours }}</span> }
         </div>
 
         <div class="store-identity-actions">
@@ -414,7 +422,19 @@
               }
               <div>
                 <h3>Sobre</h3>
-                <p>{{ tenant()?.description?.trim() || 'Informações do estabelecimento disponíveis neste cardápio.' }}</p>
+                @if (tenant()?.description?.trim()) {
+                  <div class="store-description">
+                    @for (line of descriptionLines(tenant()?.description); track $index) {
+                      <div class="description-line" [class.description-list-item]="line.list">
+                        @for (run of line.runs; track $index) {
+                          @if (run.emphasis === 'bold') { <strong>{{ run.text }}</strong> }
+                          @else if (run.emphasis === 'italic') { <em>{{ run.text }}</em> }
+                          @else { {{ run.text }} }
+                        }
+                      </div>
+                    }
+                  </div>
+                } @else { <p>Informações do estabelecimento disponíveis neste cardápio.</p> }
               </div>
             </div>
 
