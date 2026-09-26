@@ -57,6 +57,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
       <div class="page-header">
         <h1>{{ 'SETTINGS.TITLE' | translate }}</h1>
         <details class="settings-more"><summary>Mais recursos</summary>
+          @if (isBrazilianTenant()) { <button type="button" (click)="activeSection.set('payments')">Caixa e gorjetas</button> }
           @if (api.isUiModuleEnabled('users')) { <a routerLink="/users">Equipe e acessos</a> }
           @if (api.isUiModuleEnabled('contracts')) { <a routerLink="/contracts">Contratos</a> }
           @if (api.isUiModuleEnabled('working_plan')) { <a routerLink="/working-plan">Escalas</a> }
@@ -116,6 +117,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             <span>{{ 'SETTINGS.OPENING_HOURS' | translate }}</span>
           </button>
           
+          @if (!isBrazilianTenant()) {
           <button 
             type="button" 
             class="tab" 
@@ -129,6 +131,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             <span>{{ 'SETTINGS.PAYMENT_SETTINGS' | translate }}</span>
           </button>
           
+          }
           <button 
             type="button" 
             class="tab" 
@@ -166,6 +169,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
           </button>
           }
           
+          @if (!isBrazilianTenant()) {
           <button 
             type="button" 
             class="tab" 
@@ -176,6 +180,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             </svg>
             <span>{{ 'SETTINGS.TAXES' | translate }}</span>
           </button>
+          }
           @if (settingsModuleTabVisible('kitchen_bar')) {
           <button
             type="button"
@@ -226,6 +231,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             </svg>
             <span>{{ 'SETTINGS.PROMOS_TAB' | translate }}</span>
           </button>
+          @if (!isBrazilianTenant()) {
           <button
             type="button"
             class="tab"
@@ -238,6 +244,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             </svg>
             <span>{{ 'SETTINGS.DELIVERY_INTEGRATIONS_TAB' | translate }}</span>
           </button>
+          }
           <button
             type="button"
             class="tab"
@@ -265,6 +272,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             <span>{{ 'SETTINGS.PROVIDERS' | translate }}</span>
           </button>
           }
+          @if (!isBrazilianTenant()) {
           <button 
             type="button" 
             class="tab" 
@@ -277,6 +285,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
             </svg>
             <span>{{ 'SETTINGS.TRANSLATIONS_TITLE' | translate }}</span>
           </button>
+          }
           <button 
             type="button" 
             class="tab" 
@@ -601,13 +610,13 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
           <app-print-settings />
         } @else if (activeSection() === 'promos') {
           <app-promo-settings />
-        } @else if (activeSection() === 'delivery-integrations') {
+        } @else if (activeSection() === 'delivery-integrations' && !isBrazilianTenant()) {
           <app-delivery-integrations-settings />
         } @else if (activeSection() === 'social-posts') {
           <app-social-posts-settings />
         } @else if (activeSection() === 'contract-templates') {
           <app-contract-templates-settings />
-        } @else if (activeSection() === 'translations') {
+        } @else if (activeSection() === 'translations' && !isBrazilianTenant()) {
           <!-- Translations Section (Independent) -->
             <div class="section">
               <div class="section-header">
@@ -919,6 +928,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     }
                   </div>
 
+                  @if (isBrazilianTenant()) { <p class="hint">País: Brasil</p> } @else {
                   <div class="form-group">
                     <label for="country_code">{{ 'SETTINGS.COUNTRY_CODE' | translate }}</label>
                     <input
@@ -933,6 +943,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     />
                     <small class="field-hint">{{ 'SETTINGS.COUNTRY_CODE_HINT' | translate }}</small>
                   </div>
+                  }
                 </div>
               }
 
@@ -1044,6 +1055,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     <small class="field-hint">{{ 'SETTINGS.PUBLIC_PRIVACY_POLICY_HINT' | translate }}</small>
                   </div>
 
+                  @if (!isBrazilianTenant()) {
                   <div class="form-row">
                     <div class="form-group">
                       <label for="tax_id">{{ 'SETTINGS.TAX_ID' | translate }}</label>
@@ -1081,6 +1093,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     </select>
                     <small class="field-hint">{{ 'SETTINGS.DEFAULT_TAX_HINT' | translate }}</small>
                   </div>
+                  }
                 </div>
               }
 
@@ -1238,7 +1251,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                         <tbody>
                           @for (b of openingHoursScheduleBaselines(); track b.id) {
                             <tr>
-                              <td>{{ b.effective_from }}</td>
+                              <td>{{ isBrazilianTenant() ? displayBrazilianDate(b.effective_from) : b.effective_from }}</td>
                               <td>{{ b.note || '—' }}</td>
                               <td>
                                 <button type="button" class="btn btn-link danger" (click)="deleteBaselineSchedule(b.id)">
@@ -1298,8 +1311,8 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                         <tbody>
                           @for (o of openingHoursScheduleOverrides(); track o.id) {
                             <tr>
-                              <td>{{ o.date_from }}</td>
-                              <td>{{ o.date_to }}</td>
+                              <td>{{ isBrazilianTenant() ? displayBrazilianDate(o.date_from) : o.date_from }}</td>
+                              <td>{{ isBrazilianTenant() ? displayBrazilianDate(o.date_to) : o.date_to }}</td>
                               <td>{{ o.closed ? ('SETTINGS.OPENING_HOURS_TYPE_CLOSED' | translate) : ('SETTINGS.OPENING_HOURS_TYPE_HOURS' | translate) }}</td>
                               <td>{{ o.note || '—' }}</td>
                               <td>
@@ -1324,6 +1337,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     <p>{{ 'SETTINGS.PAYMENT_SETTINGS_SUBTITLE' | translate }}</p>
                   </div>
                   
+                  @if (isBrazilianTenant()) { <p class="hint">Moeda: Real brasileiro (R$)</p> } @else {
                   <div class="form-group">
                     <label for="currency_code">{{ 'SETTINGS.SELECT_CURRENCY' | translate }}</label>
                     <select
@@ -1444,6 +1458,8 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     <p class="hint">{{ 'SETTINGS.TSE_API_SECRET_HINT' | translate }}</p>
                   </div>
                   
+                  }
+                  @if (!isBrazilianTenant()) {
                   <div class="form-group checkbox-row">
                     <label class="switch">
                       <input type="checkbox" [(ngModel)]="formData.immediate_payment_required" name="immediate_payment_required">
@@ -1455,6 +1471,7 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upl
                     </div>
                   </div>
 
+                  }
                   <div class="divider"></div>
 
                   <h3>{{ 'SETTINGS.TIP_PRESETS_TITLE' | translate }}</h3>
@@ -2955,6 +2972,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private permissions = inject(PermissionService);
 
+  isBrazilianTenant(): boolean {
+    const tenant = this.settings();
+    return !tenant || tenant.country_code === 'BR' || (!tenant.country_code && (!tenant.currency_code || tenant.currency_code === 'BRL'));
+  }
+
+  displayBrazilianDate(value: string): string {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+  }
+
   /** ISO 4217 codes for per-tenant prices (GitHub #41). */
   readonly tenantCurrencyCodes: string[] = [
     'EUR',
@@ -2992,7 +3019,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   prepaymentMinorUnits = 0;
 
   getPrepaymentMinorDigits(): number {
-    const raw = (this.formData.currency_code || 'EUR').trim().toUpperCase();
+    const raw = (this.formData.currency_code || 'BRL').trim().toUpperCase();
     if (!raw || raw.length !== 3) {
       return 2;
     }
@@ -3017,7 +3044,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   getPrepaymentCurrencySymbol(): string {
-    const raw = (this.formData.currency_code || 'EUR').trim().toUpperCase();
+    const raw = (this.formData.currency_code || 'BRL').trim().toUpperCase();
     const code = raw.length === 3 ? raw : 'EUR';
     try {
       const parts = new Intl.NumberFormat(undefined, {
@@ -3031,7 +3058,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   getPrepaymentCurrencyLabel(): string {
-    const raw = (this.formData.currency_code || 'EUR').trim().toUpperCase();
+    const raw = (this.formData.currency_code || 'BRL').trim().toUpperCase();
     const code = raw.length === 3 ? raw : 'EUR';
     const sym = this.getPrepaymentCurrencySymbol();
     return sym && sym !== code ? `${code} (${sym})` : code;
@@ -3263,7 +3290,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     ccc: null,
     default_tax_id: null,
     opening_hours: null,
-    currency_code: 'EUR',
+    currency_code: 'BRL',
     stripe_secret_key: null,
     stripe_publishable_key: null,
     revolut_merchant_secret: null,
@@ -3375,6 +3402,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.api.getTenantSettings().subscribe({
       next: (settings) => {
         this.settings.set(settings);
+        if (this.isBrazilianTenant() && ['taxes', 'delivery-integrations', 'translations'].includes(this.activeSection())) {
+          this.activeSection.set('general');
+        }
         this.formData = {
           name: settings.name || '',
           business_type: settings.business_type || null,
@@ -3389,7 +3419,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
           ccc: settings.ccc || null,
           default_tax_id: settings.default_tax_id ?? null,
           opening_hours: settings.opening_hours || null,
-          currency_code: settings.currency_code || 'EUR',
+          currency_code: settings.currency_code || 'BRL',
           stripe_secret_key: null,
           stripe_publishable_key: settings.stripe_publishable_key || null,
           revolut_merchant_secret: null,
@@ -4427,16 +4457,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
       updateData.tse_client_id = null;
     }
 
+    if (this.isBrazilianTenant()) {
+      for (const key of [
+        'immediate_payment_required', 'currency_code', 'country_code', 'tax_id', 'cif', 'ccc', 'default_tax_id',
+        'stripe_publishable_key', 'stripe_secret_key', 'revolut_merchant_secret',
+        'fiscal_mode', 'fiscal_invoice_series', 'fiscal_aeat_api_secret',
+        'fiscal_country', 'tse_mode', 'tse_client_id', 'tse_api_secret',
+      ] as const) delete (updateData as Record<string, unknown>)[key];
+    }
+
     this.api.updateTenantSettings(updateData).subscribe({
       next: (updatedSettings) => {
         this.settings.set(updatedSettings);
         this.api.applyTenantUiModulesFromSettings(updatedSettings);
-        this.success.set('Settings saved successfully!');
+        this.success.set('Configurações salvas com sucesso.');
         this.scheduleSuccessDismiss();
         this.saving.set(false);
       },
       error: (err) => {
-        this.error.set('Failed to save settings. Please try again.');
+        this.error.set('Não foi possível salvar as configurações. Tente novamente.');
         this.saving.set(false);
         console.error('Error updating settings:', err);
       }

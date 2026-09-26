@@ -740,7 +740,7 @@ export class CatalogComponent implements OnInit {
     price: ''
   };
 
-  currency = signal<string>('€');
+  currency = signal<string>('R$');
   currencyCode = signal<string | null>(null);
 
   /** Cards with long description / aromas / elaboration: collapsed by default with line-clamp. */
@@ -806,7 +806,7 @@ export class CatalogComponent implements OnInit {
         if (code) {
           this.currency.set(currencySymbolFromIsoCode(this.translate, code));
         } else {
-          this.currency.set(settings.currency || '€');
+          this.currency.set(settings.currency || 'R$');
         }
       },
       error: (err) => {
@@ -926,7 +926,7 @@ export class CatalogComponent implements OnInit {
 
   formatPrice(cents: number): string {
     const currencyCode = this.currencyCode();
-    const locale = navigator.language || 'en-US';
+    const locale = currencyCode === 'BRL' || this.currency() === 'R$' ? 'pt-BR' : navigator.language || 'en-US';
     if (currencyCode) {
       return new Intl.NumberFormat(locale, {
         style: 'currency',
@@ -934,7 +934,7 @@ export class CatalogComponent implements OnInit {
         currencyDisplay: 'symbol'
       }).format(cents / 100);
     }
-    return `${this.currency()}${(cents / 100).toFixed(2)}`;
+    return `${this.currency()} ${(cents / 100).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   getImageUrl(url: string | null | undefined): string {

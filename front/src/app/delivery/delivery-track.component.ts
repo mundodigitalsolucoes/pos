@@ -106,7 +106,14 @@ export class DeliveryTrackComponent implements OnInit, OnDestroy {
   }
 
   formatCents(cents: number): string {
-    return (cents / 100).toFixed(2);
+    const currency = this.status()?.currency_code || 'BRL';
+    try {
+      return new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : undefined, {
+        style: 'currency', currency,
+      }).format(cents / 100);
+    } catch {
+      return currency === 'BRL' ? `R$ ${(cents / 100).toFixed(2).replace('.', ',')}` : `${(cents / 100).toFixed(2)} ${currency}`;
+    }
   }
 
   readonly steps = STATUS_STEPS;

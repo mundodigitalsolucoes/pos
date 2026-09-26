@@ -8,9 +8,6 @@
       <a routerLink="/features" class="user-manual-nav__link">{{ 'LANDING.NAV_FEATURES' | translate }}</a>
       <a routerLink="/pricing" class="user-manual-nav__link">{{ 'LANDING.NAV_PRICING' | translate }}</a>
       <a routerLink="/about" class="user-manual-nav__link">{{ 'LANDING.NAV_ABOUT' | translate }}</a>
-      <a routerLink="/manual-usuario" class="user-manual-nav__link user-manual-nav__link--active" data-testid="user-manual-nav-manual">{{
-        'LANDING.USER_MANUAL' | translate
-      }}</a>
     </div>
     <div class="user-manual-nav__actions">
       <app-language-picker data-testid="user-manual-language-picker"></app-language-picker>
@@ -24,7 +21,8 @@
       <p class="user-manual-status" data-testid="user-manual-loading">{{ 'USER_MANUAL_PAGE.LOADING' | translate }}</p>
     } @else if (error()) {
       <p class="user-manual-status user-manual-status--error" data-testid="user-manual-error">
-        {{ 'USER_MANUAL_PAGE.LOAD_ERROR' | translate }}
+        Central de Ajuda em atualização. Precisa de suporte? Escreva para
+        <a href="mailto:contato@mundodigitalsolucoes.com.br">contato@mundodigitalsolucoes.com.br</a>.
       </p>
     } @else if (contentHtml(); as html) {
       <div class="user-manual-doc" data-testid="user-manual-content" [innerHTML]="html"></div>

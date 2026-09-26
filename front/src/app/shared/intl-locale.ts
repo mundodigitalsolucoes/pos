@@ -6,13 +6,14 @@ import { TranslateService } from '@ngx-translate/core';
 export function intlLocaleFromTranslate(translate: TranslateService): string {
   const raw = (translate.currentLang || '').trim().toLowerCase();
   if (!raw) {
-    return typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+    return 'pt-BR';
   }
   if (raw.startsWith('zh')) {
     return 'zh-CN';
   }
   const base = raw.split('-')[0];
   const map: Record<string, string> = {
+    pt: 'pt-BR',
     en: 'en-GB',
     es: 'es-ES',
     de: 'de-DE',

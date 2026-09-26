@@ -32,7 +32,6 @@ import { TranslateModule } from '@ngx-translate/core';
           <div class="landing-footer__group">
             <span class="landing-footer__group-label">{{ 'LANDING.FOOTER_SUPPORT' | translate }}</span>
             <a routerLink="/about">{{ 'LANDING.NAV_ABOUT' | translate }}</a>
-            <a routerLink="/manual-usuario">{{ 'LANDING.USER_MANUAL' | translate }}</a>
             <a href="mailto:contato@mundodigitalsolucoes.com.br">{{ 'LANDING.CONTACT_US' | translate }}</a>
             <a href="https://wa.me/5517992822597" target="_blank" rel="noopener noreferrer">WhatsApp: (17) 99282-2597</a>
             <a routerLink="/terms">{{ 'LEGAL.TERMS_OF_SERVICE' | translate }}</a>

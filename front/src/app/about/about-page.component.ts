@@ -59,17 +59,14 @@ import { LandingSiteFooterComponent } from '../shared/landing-site-footer.compon
           <h2 id="about-manual-heading" class="about-section__title">{{ 'ABOUT_PAGE.MANUAL_TITLE' | translate }}</h2>
           <p class="about-section__body">
             {{ 'ABOUT_PAGE.MANUAL_BODY' | translate }}
-            <a routerLink="/manual-usuario" class="about-section__link" data-testid="about-manual-link">{{
-              'LANDING.USER_MANUAL' | translate
-            }}</a>
+            Central de Ajuda em atualização. Contato: <a href="mailto:contato@mundodigitalsolucoes.com.br" class="about-section__link">contato@mundodigitalsolucoes.com.br</a>
           </p>
         </section>
 
         <section class="about-section" aria-labelledby="about-contact-heading">
           <h2 id="about-contact-heading" class="about-section__title">{{ 'ABOUT_PAGE.CONTACT_TITLE' | translate }}</h2>
           <p class="about-section__body">
-            {{ 'ABOUT_PAGE.CONTACT_BODY' | translate }}
-            <a href="mailto:hello@satisfecho.de" class="about-section__link">hello@satisfecho.de</a>
+            Fale com a equipe MDS Food: <a href="mailto:contato@mundodigitalsolucoes.com.br" class="about-section__link">contato@mundodigitalsolucoes.com.br</a>
           </p>
         </section>
       </main>

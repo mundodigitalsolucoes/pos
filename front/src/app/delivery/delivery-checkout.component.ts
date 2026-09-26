@@ -316,7 +316,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   }
 
   formatPrice(product: PublicTenantMenuProduct): string {
-    return product.price_formatted || `${(product.price_cents / 100).toFixed(2)}`;
+    return this.formatCents(product.price_cents);
   }
 
   stockLeft(product: PublicTenantMenuProduct): number | null {
@@ -324,11 +324,11 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
   }
 
   formatCents(cents: number): string {
-    const currency = this.menu()?.currency || 'EUR';
+    const currency = this.menu()?.currency || this.deliveryConfig()?.currency_code || 'BRL';
     try {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100);
+      return new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : undefined, { style: 'currency', currency }).format(cents / 100);
     } catch {
-      return `${(cents / 100).toFixed(2)} ${currency}`;
+      return currency === 'BRL' ? `R$ ${(cents / 100).toFixed(2).replace('.', ',')}` : `${(cents / 100).toFixed(2)} ${currency}`;
     }
   }
 
@@ -455,7 +455,7 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
               msg = this.translate.instant('DELIVERY_CHECKOUT.POSTAL_REQUIRED');
             } else if (detail.includes('location')) {
               msg = this.translate.instant('DELIVERY_CHECKOUT.LOCATION_REQUIRED');
-            } else {
+            } else if (/^(CEP inválido|CEP não encontrado|Não conseguimos localizar|O CEP não corresponde|Informe logradouro)/.test(detail)) {
               msg = detail;
             }
           }
@@ -478,10 +478,10 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
           this.cardError.set(this.translate.instant('DELIVERY_CHECKOUT.PAY_FAILED'));
         }
       },
-      error: (err) => {
+      error: () => {
         this.processingPayment.set(false);
         this.cardError.set(
-          err.error?.detail || this.translate.instant('DELIVERY_CHECKOUT.PAY_FAILED'),
+          this.translate.instant('DELIVERY_CHECKOUT.PAY_FAILED'),
         );
       },
     });
@@ -506,10 +506,10 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
         this.showStripeForm.set(true);
         await this.loadStripe();
       },
-      error: (err) => {
+      error: () => {
         this.processingPayment.set(false);
         this.cardError.set(
-          err.error?.detail || this.translate.instant('DELIVERY_CHECKOUT.PAY_FAILED'),
+          this.translate.instant('DELIVERY_CHECKOUT.PAY_FAILED'),
         );
       },
     });

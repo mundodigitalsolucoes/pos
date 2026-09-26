@@ -2543,7 +2543,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   /** When set (via `?table=` query), order lists show only this table's orders. */
   tableScopeId = signal<number | null>(null);
   loading = signal(true);
-  currency = signal<string>('€');
+  currency = signal<string>('R$');
   currencyCode = signal<string | null>(null);
   showRemovedItems = false;
   viewMode = signal<'active' | 'not_paid' | 'history' | 'delivery'>('active');
@@ -2791,7 +2791,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
           if (isNaN(date.getTime())) return '';
           // Use browser's local timezone for display
           const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          return date.toLocaleString(undefined, {
+          return date.toLocaleString(intlLocaleFromTranslate(this.translate), {
             month: 'numeric',
             day: 'numeric',
             year: 'numeric',
@@ -3641,7 +3641,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
         if (code) {
           this.currency.set(currencySymbolFromIsoCode(this.translate, code));
         } else {
-          this.currency.set(settings.currency || '€');
+          this.currency.set(settings.currency || 'R$');
         }
       },
       error: (err) => {
@@ -4101,11 +4101,11 @@ export class OrdersComponent implements OnInit, OnDestroy {
         currencyDisplay: 'symbol'
       }).format(priceCents / 100);
     }
-    return `${currencySymbol}${(priceCents / 100).toFixed(2)}`;
+    return `${currencySymbol} ${(priceCents / 100).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   formatExactTime(dateString: string): string {
-    if (!dateString) return 'Unknown';
+    if (!dateString) return 'Data indisponível';
 
     try {
       // Parse as UTC if it has timezone indicator, otherwise assume UTC
@@ -4116,12 +4116,12 @@ export class OrdersComponent implements OnInit, OnDestroy {
       const date = new Date(dateStr);
 
       if (isNaN(date.getTime())) {
-        return 'Invalid date';
+        return 'Data inválida';
       }
 
       // Explicitly use browser's timezone for display
       const timeZone = this.getBrowserTimezone();
-      return date.toLocaleString(undefined, {
+      return date.toLocaleString(intlLocaleFromTranslate(this.translate), {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -4137,7 +4137,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   formatOrderTime(dateString: string): string {
-    if (!dateString) return 'Unknown';
+    if (!dateString) return 'Data indisponível';
 
     // Parse the date string - ensure it's treated as UTC if no timezone is specified
     let date: Date;
@@ -4154,7 +4154,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
     // Check if date is valid
     if (isNaN(date.getTime())) {
       console.warn('Invalid date string:', dateString);
-      return 'Invalid date';
+      return 'Data inválida';
     }
 
     const now = new Date();
@@ -4162,7 +4162,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
 
     // Handle negative differences (future dates) - shouldn't happen but just in case
     if (diffMs < 0) {
-      return 'Just now';
+      return 'Agora mesmo';
     }
 
     // Calculate time differences
@@ -4173,23 +4173,23 @@ export class OrdersComponent implements OnInit, OnDestroy {
 
     // If less than 1 minute ago
     if (diffSeconds < 60) {
-      return diffSeconds < 10 ? 'Just now' : `${diffSeconds}s ago`;
+      return diffSeconds < 10 ? 'Agora mesmo' : `há ${diffSeconds}s`;
     }
     // If less than 1 hour ago
     if (diffMins < 60) {
-      return `${diffMins}m ago`;
+      return `há ${diffMins} min`;
     }
     // If less than 24 hours ago
     if (diffHours < 24) {
-      return `${diffHours}h ago`;
+      return `há ${diffHours} h`;
     }
     // If less than 7 days ago
     if (diffDays < 7) {
-      return `${diffDays}d ago`;
+      return `há ${diffDays} dias`;
     }
     // Otherwise show formatted date and time in local timezone
     const timeZone = this.getBrowserTimezone();
-    return date.toLocaleString(undefined, {
+    return date.toLocaleString(intlLocaleFromTranslate(this.translate), {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',

@@ -320,9 +320,9 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     this.orderCart.setQuantity(key, quantity);
   }
   formatCents(cents: number): string {
-    const currency = this.currencyLabel() || 'EUR';
-    try { return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100); }
-    catch { return `${(cents / 100).toFixed(2)} ${currency}`; }
+    const currency = this.currencyLabel() || 'BRL';
+    try { return new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : undefined, { style: 'currency', currency }).format(cents / 100); }
+    catch { return currency === 'BRL' ? `R$ ${(cents / 100).toFixed(2).replace('.', ',')}` : `${(cents / 100).toFixed(2)} ${currency}`; }
   }
 
   scrollToFeatured(): void {
@@ -396,10 +396,8 @@ export class PublicMenuComponent implements OnInit, OnDestroy {
     return url.startsWith('/') ? base + url : `${base}/${url}`;
   }
 
-  formatPrice(product: { price_formatted: string }): string {
-    const amount = product.price_formatted;
-    const code = this.currencyLabel();
-    return code ? `${amount} ${code}` : amount;
+  formatPrice(product: { price_cents: number }): string {
+    return this.formatCents(product.price_cents);
   }
 
   modifierGroups(product: unknown): PublicModifierGroup[] {

@@ -200,7 +200,7 @@
           </label>
           <label>
             {{ 'DELIVERY_CHECKOUT.PHONE' | translate }} *
-            <input type="tel" name="phone" [(ngModel)]="customerPhone" required autocomplete="tel" />
+            <input type="tel" name="phone" [(ngModel)]="customerPhone" placeholder="(19) 99999-9999" required autocomplete="tel" />
           </label>
           @if (brazilianDelivery()) {
           <div class="br-address-grid">

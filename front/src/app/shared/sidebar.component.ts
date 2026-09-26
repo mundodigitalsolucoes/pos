@@ -90,7 +90,6 @@ import { OfflineOrderQueueService } from '../services/offline-order-queue.servic
         </nav>
 
         <div class="sidebar-footer">
-          <a routerLink="/manual-usuario" class="footer-link" (click)="closeSidebar()">Ajuda</a>
           <details class="account-menu">
             <summary>{{ user()?.full_name || user()?.email || 'Minha conta' }}</summary>
             @if (canViewMyShift()) { <a routerLink="/my-shift" (click)="closeSidebar()">Meu turno</a> }
