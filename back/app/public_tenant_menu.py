@@ -115,6 +115,10 @@ def _resolve_tenant_product_image(
     tp: models.TenantProduct,
 ) -> str | None:
     image_filename = tp.image_filename
+    if not image_filename and tp.product_id:
+        custom_product = session.get(models.Product, tp.product_id)
+        if custom_product and custom_product.image_filename:
+            image_filename = custom_product.image_filename
     if not image_filename and tp.provider_product_id:
         provider_product = session.get(models.ProviderProduct, tp.provider_product_id)
         if provider_product and provider_product.image_filename:
