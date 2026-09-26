@@ -320,12 +320,12 @@ def _load_flat_products(
         if tp.product_id:
             custom_product = session.get(models.Product, tp.product_id)
             if custom_product:
-                if custom_product.description:
+                if custom_product.description is not None:
                     description = custom_product.description
                 from .product_stock import product_stock_alert_payload
 
                 stock_fields = product_stock_alert_payload(custom_product)
-        if not description and catalog_item and catalog_item.description:
+        if description is None and catalog_item and catalog_item.description:
             description = catalog_item.description
 
         entity_type = "tenant_product"

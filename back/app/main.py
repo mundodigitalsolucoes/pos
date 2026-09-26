@@ -5653,7 +5653,7 @@ def list_products(
 
         if tenant_product:
             # Backfill description from catalog if missing
-            if not product.description and tenant_product.catalog_id:
+            if product.description is None and tenant_product.catalog_id:
                 catalog_item = session.exec(
                     select(models.ProductCatalog).where(models.ProductCatalog.id == tenant_product.catalog_id)
                 ).first()
@@ -5735,6 +5735,10 @@ def update_product(
         product.cost_cents = product_update.cost_cents
     if product_update.ingredients is not None:
         product.ingredients = product_update.ingredients
+    if "description" in product_update.model_fields_set:
+        # Empty string marks an explicit clear; None means an untouched legacy
+        # product whose catalog description may still be inherited.
+        product.description = product_update.description or ""
     if product_update.category is not None:
         from .category_codes import normalize_product_category
 
@@ -12163,7 +12167,7 @@ def get_menu(
         if tp.product_id:
             custom_product = session.get(models.Product, tp.product_id)
             if custom_product:
-                if custom_product.description:
+                if custom_product.description is not None:
                     product_data["description"] = custom_product.description
                 from .product_stock import product_stock_alert_payload
 
@@ -12206,7 +12210,7 @@ def get_menu(
                 product_data["category_code"] = get_category_code(catalog_item.category)
             if catalog_item.subcategory:
                 product_data["subcategory"] = catalog_item.subcategory
-            if catalog_item.description and not product_data.get("description"):
+            if catalog_item.description and "description" not in product_data:
                 product_data["description"] = catalog_item.description
 
                 # Add translated description if available

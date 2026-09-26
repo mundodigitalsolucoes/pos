@@ -1390,6 +1390,7 @@ class ProductUpdate(SQLModel):
     name: str | None = None
     price_cents: int | None = None
     cost_cents: int | None = None
+    description: str | None = None
     ingredients: str | None = None
     category: str | None = None
     subcategory: str | None = None
