@@ -60,7 +60,12 @@
       @if (step() === 'menu') {
         <div class="delivery-toolbar">
           <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.MENU_HINT' | translate }}</p>
-          <button type="button" class="btn btn-primary delivery-cart-btn" [disabled]="cartCount() < 1" (click)="goToCart()">
+          <button
+            type="button"
+            class="btn btn-primary delivery-cart-btn"
+            [disabled]="cartCount() < 1"
+            (click)="goToCart()"
+          >
             {{ 'DELIVERY_CHECKOUT.VIEW_CART' | translate }} ({{ cartCount() }})
           </button>
         </div>
@@ -73,7 +78,14 @@
           @for (cat of categories(); track cat.id) {
             <section class="delivery-category" [attr.aria-labelledby]="'dcat-' + cat.id">
               <h2 class="delivery-category-title" [id]="'dcat-' + cat.id">
-                <button type="button" class="delivery-category-toggle" (click)="toggleCategory(cat.id)" [attr.aria-expanded]="isCategoryExpanded(cat.id)" [attr.aria-controls]="categoryPanelId(cat.id)" [attr.aria-label]="categoryToggleAriaLabel(cat)">
+                <button
+                  type="button"
+                  class="delivery-category-toggle"
+                  (click)="toggleCategory(cat.id)"
+                  [attr.aria-expanded]="isCategoryExpanded(cat.id)"
+                  [attr.aria-controls]="categoryPanelId(cat.id)"
+                  [attr.aria-label]="categoryToggleAriaLabel(cat)"
+                >
                   <span>{{ getCategoryLabel(cat.name) }}</span>
                   <span aria-hidden="true">{{ isCategoryExpanded(cat.id) ? '▾' : '▸' }}</span>
                 </button>
@@ -83,7 +95,12 @@
                   @for (product of cat.products; track product.id) {
                     <li class="delivery-product">
                       @if (product.image_url) {
-                        <img class="delivery-product-image" [src]="productImageUrl(product.image_url)" [alt]="product.name" loading="lazy" />
+                        <img
+                          class="delivery-product-image"
+                          [src]="productImageUrl(product.image_url)"
+                          [alt]="product.name"
+                          loading="lazy"
+                        />
                       }
                       <div class="delivery-product-body">
                         <div class="delivery-product-header">
@@ -96,8 +113,17 @@
                         @if (product.description?.trim()) {
                           <p class="delivery-product-desc">{{ product.description }}</p>
                         }
-                        <button type="button" class="btn btn-secondary delivery-add-btn" [disabled]="!product.available" (click)="addToCart(product)">
-                          {{ product.available ? ('DELIVERY_CHECKOUT.ADD' | translate) : ('DELIVERY_CHECKOUT.UNAVAILABLE' | translate) }}
+                        <button
+                          type="button"
+                          class="btn btn-secondary delivery-add-btn"
+                          [disabled]="!product.available"
+                          (click)="addToCart(product)"
+                        >
+                          {{
+                            product.available
+                              ? ('DELIVERY_CHECKOUT.ADD' | translate)
+                              : ('DELIVERY_CHECKOUT.UNAVAILABLE' | translate)
+                          }}
                         </button>
                       </div>
                     </li>
@@ -113,14 +139,18 @@
         <h2>{{ 'DELIVERY_CHECKOUT.CART_TITLE' | translate }}</h2>
         @if (cart().length === 0) {
           <p>{{ 'DELIVERY_CHECKOUT.CART_EMPTY' | translate }}</p>
-          <button type="button" class="btn btn-secondary" (click)="goToMenu()">{{ 'DELIVERY_CHECKOUT.BACK_TO_MENU' | translate }}</button>
+          <button type="button" class="btn btn-secondary" (click)="goToMenu()">
+            {{ 'DELIVERY_CHECKOUT.BACK_TO_MENU' | translate }}
+          </button>
         } @else {
           <ul class="delivery-cart-list">
             @for (line of cart(); track line.key) {
               <li class="delivery-cart-row">
                 <div>
                   <strong>{{ line.product.name }}</strong>
-                  <span class="delivery-cart-line-price">{{ formatCents((line.product.price_cents + line.modifierDeltaCents) * line.quantity) }}</span>
+                  <span class="delivery-cart-line-price">{{
+                    formatCents((line.product.price_cents + line.modifierDeltaCents) * line.quantity)
+                  }}</span>
                 </div>
                 <div class="delivery-qty">
                   <button type="button" (click)="setQty(line.key, line.quantity - 1)">−</button>
@@ -131,15 +161,16 @@
             }
           </ul>
           <p class="delivery-total">
-            <strong>{{ (brazilianDelivery() && !deliveryQuote() ? 'DELIVERY_CHECKOUT.SUBTOTAL' : 'DELIVERY_CHECKOUT.TOTAL') | translate }}:</strong>
-            {{ formatCents(brazilianDelivery() && !deliveryQuote() ? cartSubtotalCents() : cartTotalCents()) }}
+            <strong>{{ 'DELIVERY_CHECKOUT.TOTAL' | translate }}:</strong>
+            {{ formatCents(cartTotalCents()) }}
           </p>
-          @if (brazilianDelivery() && !deliveryQuote()) {
-            <p class="delivery-hint">A taxa de entrega será calculada pelo endereço.</p>
-          }
           <div class="delivery-actions">
-            <button type="button" class="btn btn-secondary" (click)="goToMenu()">{{ 'DELIVERY_CHECKOUT.BACK_TO_MENU' | translate }}</button>
-            <button type="button" class="btn btn-primary" (click)="goToAddress()">{{ 'DELIVERY_CHECKOUT.CONTINUE_ADDRESS' | translate }}</button>
+            <button type="button" class="btn btn-secondary" (click)="goToMenu()">
+              {{ 'DELIVERY_CHECKOUT.BACK_TO_MENU' | translate }}
+            </button>
+            <button type="button" class="btn btn-primary" (click)="goToAddress()">
+              {{ 'DELIVERY_CHECKOUT.CONTINUE_ADDRESS' | translate }}
+            </button>
           </div>
         }
       }
@@ -151,10 +182,20 @@
           <p class="form-error">{{ formError() }}</p>
         }
         <form class="delivery-form" (ngSubmit)="submitAddress()">
-          <label>{{ 'DELIVERY_CHECKOUT.NAME' | translate }}<input type="text" name="name" [(ngModel)]="customerName" autocomplete="name" /></label>
+          <label>
+            {{ 'DELIVERY_CHECKOUT.NAME' | translate }}
+            <input type="text" name="name" [(ngModel)]="customerName" autocomplete="name" />
+          </label>
           <label>
             {{ 'DELIVERY_CHECKOUT.PHONE' | translate }} *
-            <input type="tel" name="phone" [(ngModel)]="customerPhone" placeholder="(19) 99999-9999" required autocomplete="tel" />
+            <input
+              type="tel"
+              name="phone"
+              [(ngModel)]="customerPhone"
+              placeholder="(19) 99999-9999"
+              required
+              autocomplete="tel"
+            />
           </label>
           @if (brazilianDelivery()) {
           <div class="br-address-grid">
@@ -173,59 +214,129 @@
           @if (deliveryConfig()?.delivery_radius_meters) {
             <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.RADIUS_HINT' | translate: { meters: deliveryConfig()!.delivery_radius_meters } }}</p>
           }
-          <div class="delivery-actions">
-            <button type="button" class="btn btn-secondary btn-sm" (click)="requestDeliveryLocation()" [disabled]="submitting()">Calcular entrega</button>
-          </div>
           <p class="delivery-hint" role="status">{{ addressStatus() }}</p>
           } @else {
           <label>
             {{ 'DELIVERY_CHECKOUT.ADDRESS' | translate }} *
-            <textarea name="address" rows="3" [(ngModel)]="deliveryAddress" required autocomplete="street-address"></textarea>
+            <textarea
+              name="address"
+              rows="3"
+              [(ngModel)]="deliveryAddress"
+              required
+              autocomplete="street-address"
+            ></textarea>
           </label>
           @if (deliveryConfig()?.postal_codes_required) {
-            <label>{{ 'DELIVERY_CHECKOUT.POSTAL_CODE' | translate }} *<input type="text" name="postal" [(ngModel)]="postalCode" required autocomplete="postal-code" /></label>
+            <label>
+              {{ 'DELIVERY_CHECKOUT.POSTAL_CODE' | translate }} *
+              <input
+                type="text"
+                name="postal"
+                [(ngModel)]="postalCode"
+                required
+                autocomplete="postal-code"
+              />
+            </label>
             @if (deliveryConfig()?.postal_codes?.length) {
-              <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.POSTAL_HINT' | translate }}: {{ deliveryConfig()!.postal_codes.join(', ') }}</p>
+              <p class="delivery-hint">
+                {{ 'DELIVERY_CHECKOUT.POSTAL_HINT' | translate }}:
+                {{ deliveryConfig()!.postal_codes.join(', ') }}
+              </p>
             }
           }
           @if (deliveryConfig()?.delivery_radius_meters) {
-            <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.RADIUS_HINT' | translate: { meters: deliveryConfig()!.delivery_radius_meters } }}</p>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="requestDeliveryLocation()">{{ 'DELIVERY_CHECKOUT.SHARE_LOCATION' | translate }}</button>
+            <p class="delivery-hint">
+              {{
+                'DELIVERY_CHECKOUT.RADIUS_HINT'
+                  | translate: { meters: deliveryConfig()!.delivery_radius_meters }
+              }}
+            </p>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="requestDeliveryLocation()">
+              {{ 'DELIVERY_CHECKOUT.SHARE_LOCATION' | translate }}
+            </button>
           }
           }
-          @if (deliveryQuote()?.delivery_fee_cents != null) {
-            <p class="delivery-hint"><strong>{{ 'DELIVERY_CHECKOUT.DELIVERY_FEE' | translate }}:</strong> {{ formatCents(deliveryQuote()!.delivery_fee_cents!) }}</p>
-          } @else if (!brazilianDelivery() && (deliveryConfig()?.delivery_fee_cents ?? 0) > 0) {
-            <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.DELIVERY_FEE' | translate }}: {{ formatCents(deliveryConfig()!.delivery_fee_cents) }}</p>
+          @if ((deliveryConfig()?.delivery_fee_cents ?? 0) > 0) {
+            <p class="delivery-hint">
+              {{ 'DELIVERY_CHECKOUT.DELIVERY_FEE' | translate }}:
+              {{ formatCents(deliveryConfig()!.delivery_fee_cents) }}
+            </p>
           }
-          <label>{{ 'DELIVERY_CHECKOUT.NOTES' | translate }}<textarea name="notes" rows="2" [(ngModel)]="deliveryNotes"></textarea></label>
+          <label>
+            {{ 'DELIVERY_CHECKOUT.NOTES' | translate }}
+            <textarea name="notes" rows="2" [(ngModel)]="deliveryNotes"></textarea>
+          </label>
           <div class="delivery-actions">
-            <button type="button" class="btn btn-secondary" (click)="goToCart()" [disabled]="submitting()">{{ 'COMMON.BACK' | translate }}</button>
-            <button type="submit" class="btn btn-primary" [disabled]="submitting()">{{ submitting() ? ('COMMON.LOADING' | translate) : ('DELIVERY_CHECKOUT.CONTINUE_PAY' | translate) }}</button>
+            <button type="button" class="btn btn-secondary" (click)="goToCart()" [disabled]="submitting()">
+              {{ 'COMMON.BACK' | translate }}
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+              {{
+                submitting()
+                  ? ('COMMON.LOADING' | translate)
+                  : ('DELIVERY_CHECKOUT.CONTINUE_PAY' | translate)
+              }}
+            </button>
           </div>
         </form>
       }
 
       @if (step() === 'pay') {
         <h2>{{ 'DELIVERY_CHECKOUT.PAY_TITLE' | translate }}</h2>
-        <p class="delivery-total"><strong>{{ 'DELIVERY_CHECKOUT.TOTAL' | translate }}:</strong> {{ formatCents(totalCents()) }}</p>
+        <p class="delivery-total">
+          <strong>{{ 'DELIVERY_CHECKOUT.TOTAL' | translate }}:</strong>
+          {{ formatCents(totalCents()) }}
+        </p>
         @if (deliveryFeeCents() > 0) {
-          <p class="delivery-hint">{{ 'DELIVERY_CHECKOUT.SUBTOTAL' | translate }}: {{ formatCents(subtotalCents()) }} · {{ 'DELIVERY_CHECKOUT.DELIVERY_FEE' | translate }}: {{ formatCents(deliveryFeeCents()) }}</p>
+          <p class="delivery-hint">
+            {{ 'DELIVERY_CHECKOUT.SUBTOTAL' | translate }}: {{ formatCents(subtotalCents()) }}
+            · {{ 'DELIVERY_CHECKOUT.DELIVERY_FEE' | translate }}: {{ formatCents(deliveryFeeCents()) }}
+          </p>
         }
-        @if (cardError()) { <p class="form-error">{{ cardError() }}</p> }
+        @if (cardError()) {
+          <p class="form-error">{{ cardError() }}</p>
+        }
         <div class="delivery-pay-options">
           @if (stripeReady()) {
-            <button type="button" class="btn btn-primary" [disabled]="processingPayment()" (click)="payWithStripe()">{{ 'DELIVERY_CHECKOUT.PAY_STRIPE' | translate }}</button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="processingPayment()"
+              (click)="payWithStripe()"
+            >
+              {{ 'DELIVERY_CHECKOUT.PAY_STRIPE' | translate }}
+            </button>
           }
           @if (revolutConfigured()) {
-            <button type="button" class="btn btn-secondary" [disabled]="processingPayment()" (click)="payWithRevolut()">{{ 'DELIVERY_CHECKOUT.PAY_REVOLUT' | translate }}</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              [disabled]="processingPayment()"
+              (click)="payWithRevolut()"
+            >
+              {{ 'DELIVERY_CHECKOUT.PAY_REVOLUT' | translate }}
+            </button>
           }
-          @if (!stripeReady() && !revolutConfigured()) { <p class="form-error">{{ 'DELIVERY_CHECKOUT.PAY_NOT_CONFIGURED' | translate }}</p> }
+          @if (!stripeReady() && !revolutConfigured()) {
+            <p class="form-error">{{ 'DELIVERY_CHECKOUT.PAY_NOT_CONFIGURED' | translate }}</p>
+          }
         </div>
+
         @if (showStripeForm()) {
           <div class="delivery-stripe-box">
             <div id="delivery-card-element"></div>
-            <button type="button" class="btn btn-primary" [disabled]="processingPayment()" (click)="confirmStripe()">{{ processingPayment() ? ('PAYMENTS.PROCESSING' | translate) : ('DELIVERY_CHECKOUT.CONFIRM_PAY' | translate) }}</button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="processingPayment()"
+              (click)="confirmStripe()"
+            >
+              {{
+                processingPayment()
+                  ? ('PAYMENTS.PROCESSING' | translate)
+                  : ('DELIVERY_CHECKOUT.CONFIRM_PAY' | translate)
+              }}
+            </button>
           </div>
         }
       }
@@ -234,16 +345,27 @@
         <div class="delivery-success">
           <h2>{{ 'DELIVERY_CHECKOUT.SUCCESS_TITLE' | translate }}</h2>
           <p>{{ 'DELIVERY_CHECKOUT.SUCCESS_MESSAGE' | translate }}</p>
-          @if (orderId(); as oid) { <p class="delivery-order-ref">{{ 'DELIVERY_CHECKOUT.ORDER_REF' | translate: { id: oid } }}</p> }
-          <button type="button" class="btn btn-primary" (click)="goToTrack()">{{ 'DELIVERY_CHECKOUT.TRACK_ORDER' | translate }}</button>
-          <button type="button" class="btn btn-secondary" (click)="orderAgain()">{{ 'DELIVERY_CHECKOUT.ORDER_AGAIN' | translate }}</button>
+          @if (orderId(); as oid) {
+            <p class="delivery-order-ref">{{ 'DELIVERY_CHECKOUT.ORDER_REF' | translate: { id: oid } }}</p>
+          }
+          <button type="button" class="btn btn-primary" (click)="goToTrack()">
+            {{ 'DELIVERY_CHECKOUT.TRACK_ORDER' | translate }}
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="orderAgain()">
+            {{ 'DELIVERY_CHECKOUT.ORDER_AGAIN' | translate }}
+          </button>
         </div>
       }
 
       <div class="delivery-footer-actions">
-        <a [routerLink]="['/public-menu', tenantId()]" class="delivery-back-link">{{ 'DELIVERY_CHECKOUT.VIEW_MENU_ONLY' | translate }}</a>
+        <a [routerLink]="['/public-menu', tenantId()]" class="delivery-back-link">
+          {{ 'DELIVERY_CHECKOUT.VIEW_MENU_ONLY' | translate }}
+        </a>
         <a routerLink="/" class="delivery-back-link">{{ 'DELIVERY_CHECKOUT.BACK_HOME' | translate }}</a>
-        <app-legal-links [termsUrl]="tenant()?.terms_of_service_url" [privacyUrl]="tenant()?.privacy_policy_url" />
+        <app-legal-links
+          [termsUrl]="tenant()?.terms_of_service_url"
+          [privacyUrl]="tenant()?.privacy_policy_url"
+        />
       </div>
     </main>
   }
