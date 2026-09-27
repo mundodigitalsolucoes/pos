@@ -234,3 +234,153 @@ def test_public_catalog_http_route_accepts_modifier_ids_without_client_prices():
         })
     assert response.status_code == 200, response.text
     assert checkout.call_args.args[3].items[0].customization_answers == {'catalog_modifier_option_ids': [11]}
+
+
+def test_checkout_uses_active_delivery_zone_fee_and_metadata():
+    tenant = models.Tenant(
+        id=1, name='Tenant', country_code='BR', currency_code='BRL',
+        latitude=-23.5505, longitude=-46.6333, delivery_fee_cents=999,
+    )
+    zone = models.DeliveryZone(
+        id=7, tenant_id=1, name='0-5 km',
+        min_distance_meters=0, max_distance_meters=5000,
+        fee_cents=800, estimated_minutes=35, is_active=True,
+    )
+    order = models.Order(
+        id=5, tenant_id=1, status=models.OrderStatus.pending,
+        order_channel=models.OrderChannel.satisfecho_delivery,
+        delivery_address='Rua Teste 123', customer_phone='+5511999999999',
+        delivery_fee_cents=800,
+    )
+    item = models.OrderItem(
+        order_id=5, product_id=101, product_name='Burger',
+        quantity=1, price_cents=1200,
+    )
+    session = MagicMock()
+    session.get.return_value = tenant
+    session.exec.side_effect = [
+        SimpleNamespace(all=lambda: [zone]),
+        SimpleNamespace(all=lambda: [item]),
+    ]
+    body = models.PublicSatisfechoDeliveryOrderCreate(
+        items=[models.OrderItemCreate(product_id=101, quantity=1)],
+        delivery_address='Rua Teste 123',
+        delivery_street='Rua Teste',
+        delivery_number='123',
+        delivery_neighborhood='Centro',
+        delivery_city='São Paulo',
+        delivery_state_code='SP',
+        postal_code='01001000',
+        customer_phone='+5511999999999',
+    )
+    with patch('app.catalog_modifier_checkout_routes.br_address.verify_cep'), \
+         patch('app.catalog_modifier_checkout_routes.br_address.geocode', return_value=(-23.5600, -46.6400)), \
+         patch('app.catalog_modifier_checkout_routes.distance_from_coordinates', return_value=3200.0), \
+         patch('app.catalog_modifier_checkout_routes._public_product_snapshot', return_value={
+             'canonical_product_id': 101, 'price_cents': 1200,
+             'category': 'Main', 'name': 'Burger',
+         }), \
+         patch('app.catalog_modifier_checkout_routes.validate_and_price_catalog_modifiers', return_value={
+             'price_delta_cents': 0, 'groups': [], 'summary': None,
+         }), \
+         patch('app.catalog_modifier_checkout_routes.create_satisfecho_delivery_order', return_value=(order, {})) as create, \
+         patch('app.catalog_modifier_checkout_routes._apply_modifier_snapshots'), \
+         patch('app.catalog_modifier_checkout_routes.order_delivery_fee_cents', return_value=800), \
+         patch('app.main._sign_public_delivery_order_token', return_value='signed-token'):
+        result = create_public_catalog_checkout.__wrapped__(
+            request=Request({'type': 'http', 'method': 'POST', 'path': '/catalog-checkout', 'headers': []}),
+            response=Response(), tenant_id=1, body=body, session=session,
+        )
+    assert create.call_args.kwargs['delivery_fee_cents'] == 800
+    assert result['delivery_fee_cents'] == 800
+    assert result['delivery_zone_id'] == 7
+    assert result['delivery_distance_meters'] == 3200
+    assert result['delivery_estimated_minutes'] == 35
+    assert result['delivery_pricing_source'] == 'zones'
+    assert result['total_cents'] == 2000
+
+
+def test_checkout_rejects_address_outside_active_delivery_zones():
+    tenant = models.Tenant(
+        id=1, name='Tenant', country_code='BR', currency_code='BRL',
+        latitude=-23.5505, longitude=-46.6333,
+    )
+    zone = models.DeliveryZone(
+        id=7, tenant_id=1, name='0-5 km',
+        min_distance_meters=0, max_distance_meters=5000,
+        fee_cents=800, estimated_minutes=35, is_active=True,
+    )
+    session = MagicMock()
+    session.get.return_value = tenant
+    session.exec.return_value.all.return_value = [zone]
+    body = models.PublicSatisfechoDeliveryOrderCreate(
+        items=[models.OrderItemCreate(product_id=101, quantity=1)],
+        delivery_address='Rua Longe 999',
+        delivery_street='Rua Longe',
+        delivery_number='999',
+        delivery_neighborhood='Bairro',
+        delivery_city='São Paulo',
+        delivery_state_code='SP',
+        postal_code='01001000',
+        customer_phone='+5511999999999',
+    )
+    with patch('app.catalog_modifier_checkout_routes.br_address.verify_cep'), \
+         patch('app.catalog_modifier_checkout_routes.br_address.geocode', return_value=(-23.7000, -46.8000)), \
+         patch('app.catalog_modifier_checkout_routes.distance_from_coordinates', return_value=7000.0):
+        with pytest.raises(HTTPException) as exc:
+            create_public_catalog_checkout.__wrapped__(
+                request=Request({'type': 'http', 'method': 'POST', 'path': '/catalog-checkout', 'headers': []}),
+                response=Response(), tenant_id=1, body=body, session=session,
+            )
+    assert exc.value.status_code == 400
+    assert exc.value.detail == 'Address is outside the delivery zone'
+
+
+def test_checkout_without_active_zones_keeps_legacy_fee_and_coverage():
+    tenant = models.Tenant(
+        id=1, name='Tenant', delivery_fee_cents=300, delivery_radius_meters=None,
+    )
+    order = models.Order(
+        id=5, tenant_id=1, status=models.OrderStatus.pending,
+        order_channel=models.OrderChannel.satisfecho_delivery,
+        delivery_address='Street 1', customer_phone='+5511999999999',
+        delivery_fee_cents=300,
+    )
+    item = models.OrderItem(
+        order_id=5, product_id=101, product_name='Burger',
+        quantity=1, price_cents=1200,
+    )
+    session = MagicMock()
+    session.get.return_value = tenant
+    session.exec.side_effect = [
+        SimpleNamespace(all=lambda: []),
+        SimpleNamespace(all=lambda: [item]),
+    ]
+    body = models.PublicSatisfechoDeliveryOrderCreate(
+        items=[models.OrderItemCreate(product_id=101, quantity=1)],
+        delivery_address='Street 1',
+        customer_phone='+5511999999999',
+    )
+    with patch('app.catalog_modifier_checkout_routes.validate_delivery_coverage', return_value=None) as legacy_coverage, \
+         patch('app.catalog_modifier_checkout_routes.tenant_delivery_fee_cents', return_value=300), \
+         patch('app.catalog_modifier_checkout_routes._public_product_snapshot', return_value={
+             'canonical_product_id': 101, 'price_cents': 1200,
+             'category': 'Main', 'name': 'Burger',
+         }), \
+         patch('app.catalog_modifier_checkout_routes.validate_and_price_catalog_modifiers', return_value={
+             'price_delta_cents': 0, 'groups': [], 'summary': None,
+         }), \
+         patch('app.catalog_modifier_checkout_routes.create_satisfecho_delivery_order', return_value=(order, {})) as create, \
+         patch('app.catalog_modifier_checkout_routes._apply_modifier_snapshots'), \
+         patch('app.catalog_modifier_checkout_routes.order_delivery_fee_cents', return_value=300), \
+         patch('app.main._sign_public_delivery_order_token', return_value='signed-token'):
+        result = create_public_catalog_checkout.__wrapped__(
+            request=Request({'type': 'http', 'method': 'POST', 'path': '/catalog-checkout', 'headers': []}),
+            response=Response(), tenant_id=1, body=body, session=session,
+        )
+    legacy_coverage.assert_called_once()
+    assert create.call_args.kwargs['delivery_fee_cents'] == 300
+    assert result['delivery_fee_cents'] == 300
+    assert result['delivery_zone_id'] is None
+    assert result['delivery_pricing_source'] == 'legacy'
+    assert result['total_cents'] == 1500
