@@ -84,6 +84,7 @@ import { OfflineOrderQueueService } from '../services/offline-order-queue.servic
           }
           <a routerLink="/products" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><span>Catálogo</span></a>
           @if (canViewSettings()) {
+            <a routerLink="/areas-de-entrega" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg><span>Delivery</span></a>
             <a routerLink="/integracoes" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><span>Integrações</span></a>
             <a routerLink="/settings" routerLinkActive="active" class="nav-link" (click)="closeSidebar()"><span>Configurações</span></a>
           }
@@ -215,6 +216,7 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
     if (path === '/gestao-pedidos') return 'Últimos pedidos';
     if (path === '/products' || path.startsWith('/cardapio/')) return 'Catálogo';
     if (path === '/minha-empresa') return 'Minha empresa';
+    if (path === '/areas-de-entrega') return 'Áreas de entrega';
     if (path === '/reports') return 'Desempenho';
     if (path === '/caixa') return 'Caixa';
     if (path === '/kitchen') return 'KDS / Cozinha';
