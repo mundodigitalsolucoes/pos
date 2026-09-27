@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom, timeout, finalize } from 'rxjs';
-import { ApiService, OpeningHoursBaselineRow, TenantSettings } from '../services/api.service';
+import { ApiService, DeliveryZone, OpeningHoursBaselineRow, TenantSettings } from '../services/api.service';
 import { SidebarComponent } from '../shared/sidebar.component';
 import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_MB } from '../shared/image-upload-limits';
 import { kmToMeters, reaisToCents } from './company-form-values';
@@ -61,6 +61,13 @@ export class MinhaEmpresaComponent implements OnInit {
   deliveryFee = '0,00';
   deliveryRadius = '';
   deliveryPostalCodes = '';
+  readonly deliveryZones = signal<DeliveryZone[]>([]);
+  readonly deliveryZonesError = signal(false);
+  get activeDeliveryZones(): DeliveryZone[] { return this.deliveryZones().filter(zone => zone.is_active); }
+  get deliveryMaximumKm(): string {
+    return (Math.max(0, ...this.activeDeliveryZones.map(zone => zone.max_distance_meters)) / 1000)
+      .toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+  }
   hours: Record<Weekday, DayHours> = this.defaultHours();
   hoursDirty = false;
   hoursGroup: DayGroup = 'weekdays';
@@ -74,6 +81,10 @@ export class MinhaEmpresaComponent implements OnInit {
   private today = '';
 
   ngOnInit(): void {
+    this.api.listDeliveryZones().subscribe({
+      next: zones => this.deliveryZones.set(zones),
+      error: () => this.deliveryZonesError.set(true),
+    });
     this.api.getTenantSettings().subscribe({
       next: (settings) => {
         this.settings.set(settings);

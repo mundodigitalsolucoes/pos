@@ -112,6 +112,7 @@ export const routes: Routes = [
 
   // MDS Food commercial areas backed by existing tenant-scoped features.
   { path: 'minha-empresa', canActivate: [authGuard, adminGuard], loadComponent: () => import('./minha-empresa/minha-empresa.component').then(m => m.MinhaEmpresaComponent) },
+  { path: 'areas-de-entrega', canActivate: [authGuard, adminGuard], loadComponent: () => import('./delivery-zones/delivery-zones.component').then(m => m.DeliveryZonesComponent) },
   { path: 'fidelidade', canActivate: [authGuard, adminGuard], loadComponent: () => import('./loyalty/loyalty-page.component').then(m => m.LoyaltyPageComponent) },
   { path: 'promocoes', canActivate: [authGuard, adminGuard], loadComponent: () => import('./promotions/promotions-page.component').then(m => m.PromotionsPageComponent) },
   { path: 'integracoes', canActivate: [authGuard, adminGuard], loadComponent: () => import('./integrations/integrations-page.component').then(m => m.IntegrationsPageComponent) },

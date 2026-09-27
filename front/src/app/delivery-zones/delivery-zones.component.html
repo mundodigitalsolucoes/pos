@@ -1,0 +1,29 @@
+<app-sidebar>
+  <main class="zones-page">
+    <header><div><a routerLink="/minha-empresa">← Minha empresa</a><h1>Áreas de entrega</h1><p>Defina quanto cobrar e o prazo de entrega para cada distância.</p></div><button type="button" (click)="startAdd()" [disabled]="loading() || busy()">+ Adicionar área</button></header>
+    @if (loading()) { <p role="status">Carregando áreas…</p> }
+    @if (error()) { <p class="alert" role="alert">{{ error() }} <button type="button" (click)="reload()">Tentar novamente</button></p> }
+    @if (message()) { <p class="notice" role="status">{{ message() }}</p> }
+    @if (!loading()) {
+      @if (active.length) { <p class="summary">{{ active.length }} {{ active.length === 1 ? 'área ativa' : 'áreas ativas' }} · Entrega até {{ maximumKm }} km</p> }
+      @else { <p class="notice">Nenhuma área ativa. A taxa e o raio anteriores continuam disponíveis até você configurar uma área.</p> }
+      @if (gapWarning) { <p class="alert" role="status">Há uma distância sem cobertura entre as áreas. Pedidos nessa distância ficarão fora da cobertura quando as faixas forem integradas ao checkout.</p> }
+      <section class="cards" aria-label="Áreas cadastradas">
+        @for (zone of zones(); track zone.id) {
+          <article class="card" [class.inactive]="!zone.is_active">
+            <div><h2>{{ zone.name }}</h2><p>{{ km(zone.min_distance_meters) }} a {{ km(zone.max_distance_meters) }} km · {{ zone.is_active ? 'Ativa' : 'Inativa' }}</p></div>
+            <div class="facts"><span>Taxa <strong>{{ money(zone.fee_cents) }}</strong></span><span>Prazo <strong>{{ zone.estimated_minutes }} min</strong></span></div>
+            <div class="actions"><button type="button" (click)="startEdit(zone)" [disabled]="busy()">Editar</button><button type="button" (click)="toggle(zone)" [disabled]="busy()">{{ zone.is_active ? 'Desativar' : 'Ativar' }}</button><button type="button" (click)="remove(zone)" [disabled]="busy()">Excluir</button></div>
+          </article>
+        }
+      </section>
+      @if (editing() !== null) {
+        <section class="editor"><h2>{{ editing() === 0 ? 'Nova área' : 'Editar área' }}</h2>
+          <p>O início da nova área acompanha o fim da última área ativa. Ao editar, o início da área é preservado.</p>
+          <div class="fields"><label>Nome da área<input [(ngModel)]="form.name" maxlength="128" placeholder="Ex.: Até 5 km"></label><label>Entrega até (km)<input [(ngModel)]="form.maxKm" inputmode="decimal" placeholder="5"></label><label>Taxa (R$)<input [(ngModel)]="form.fee" inputmode="decimal" placeholder="6,00"></label><label>Prazo (minutos)<input [(ngModel)]="form.minutes" inputmode="numeric" placeholder="35"></label></div>
+          <div class="actions"><button type="button" (click)="save()" [disabled]="busy()">{{ busy() ? 'Salvando…' : 'Salvar área' }}</button><button type="button" (click)="cancel()" [disabled]="busy()">Cancelar</button></div>
+        </section>
+      }
+    }
+  </main>
+</app-sidebar>
