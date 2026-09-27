@@ -481,6 +481,23 @@ class TenantMixin(SQLModel):
     tenant_id: int = Field(foreign_key="tenant.id")
 
 
+class DeliveryZone(SQLModel, table=True):
+    """Tenant-owned distance band; checkout integration is a separate change."""
+
+    __tablename__ = "delivery_zone"
+    id: int | None = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    name: str = Field(max_length=128)
+    min_distance_meters: int = Field(ge=0)
+    max_distance_meters: int = Field(gt=0)
+    fee_cents: int = Field(ge=0)
+    estimated_minutes: int = Field(gt=0)
+    is_active: bool = Field(default=True)
+    sort_order: int = Field(default=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class KitchenStation(SQLModel, table=True):
     """Prep station for kitchen/bar KDS views and optional ticket split (per product mapping)."""
 

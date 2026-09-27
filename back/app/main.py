@@ -61,6 +61,7 @@ from .delivery_integration_routes import (
     router as delivery_integration_router,
     public_router as delivery_public_router,
 )
+from .delivery_zone_routes import router as delivery_zone_router
 from .social_routes import router as social_router
 from .print_routes import staff_router as print_staff_router, agent_router as print_agent_router
 from .customer_routes import router as customer_router
@@ -582,6 +583,7 @@ app.include_router(saas_router, prefix="/saas", tags=["SaaS billing"])
 app.include_router(tenant_lifecycle_router, prefix="/tenant", tags=["Tenant lifecycle"])
 app.include_router(staff_contract_router, prefix="/staff-contracts", tags=["Staff contracts"])
 app.include_router(delivery_integration_router, prefix="/tenant", tags=["Delivery integrations"])
+app.include_router(delivery_zone_router)
 app.include_router(delivery_public_router, tags=["Delivery integrations"])
 app.include_router(social_router, prefix="/tenant", tags=["Marketing — social"])
 app.include_router(
