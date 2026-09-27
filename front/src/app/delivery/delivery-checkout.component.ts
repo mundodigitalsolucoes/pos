@@ -29,7 +29,7 @@ import { LegalLinksComponent } from '../shared/legal-links.component';
 import { contactPhoneValid } from '../shared/contact-validators';
 import { productStockLeft } from '../shared/product-stock.util';
 import { PublicOrderCartService } from '../services/public-order-cart.service';
-import { BrazilianAddress, BrazilianAddressService, addressComplete, addressText, cepDigits, emptyBrazilianAddress, maskCep } from '../shared/brazilian-address';
+import { BrazilianAddress, BrazilianAddressService, DeliveryCoverageQuote, addressComplete, addressText, cepDigits, emptyBrazilianAddress, maskCep } from '../shared/brazilian-address';
 
 type CheckoutStep = 'menu' | 'cart' | 'address' | 'pay' | 'success';
 
@@ -80,11 +80,13 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
       this.deliveryConfig()?.currency_code === 'BRL')));
   deliveryLat = signal<number | null>(null);
   deliveryLng = signal<number | null>(null);
+  deliveryQuote = signal<DeliveryCoverageQuote | null>(null);
 
   addressChanged(): void {
     this.addressStatus.set('');
     this.deliveryLat.set(null);
     this.deliveryLng.set(null);
+    this.deliveryQuote.set(null);
   }
 
   lookupCep(): void {
@@ -126,7 +128,8 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
 
   cartCount = this.orderCart.count;
   cartTotalCents = computed(() => {
-    const fee = this.deliveryConfig()?.delivery_fee_cents ?? 0;
+    const quotedFee = this.deliveryQuote()?.delivery_fee_cents;
+    const fee = quotedFee ?? this.deliveryConfig()?.delivery_fee_cents ?? 0;
     return this.cartSubtotalCents() + Math.max(0, fee);
   });
   cartSubtotalCents = this.orderCart.subtotalCents;
@@ -214,10 +217,12 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
         ...this.deliveryAddressFields, postal_code: cepDigits(this.deliveryAddressFields.postal_code),
       }));
       if (submittedAddress !== addressText(this.deliveryAddressFields)) {
+        this.deliveryQuote.set(null);
         this.addressStatus.set('Endereço alterado. Confira e tente novamente.');
         return false;
       }
       if (!result.covered) {
+        this.deliveryQuote.set(null);
         this.addressStatus.set('Endereço fora da área de entrega.');
         this.formError.set(result.reason === 'restaurant_location_required' ?
           'O restaurante ainda não configurou a localização para entregas. Tente novamente mais tarde.' :
@@ -226,9 +231,16 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
       }
       this.deliveryLat.set(result.latitude);
       this.deliveryLng.set(result.longitude);
-      this.addressStatus.set('Endereço dentro da área de entrega.');
+      this.deliveryQuote.set(result);
+      const details = [
+        result.distance_meters != null ? `${(result.distance_meters / 1000).toFixed(1).replace('.', ',')} km` : null,
+        result.delivery_fee_cents != null ? formatCentsForQuote(result.delivery_fee_cents, this.menu()?.currency || this.deliveryConfig()?.currency_code || 'BRL') : null,
+        result.estimated_minutes != null ? `aprox. ${result.estimated_minutes} min` : null,
+      ].filter(Boolean).join(' · ');
+      this.addressStatus.set(details ? `Endereço dentro da área de entrega · ${details}` : 'Endereço dentro da área de entrega.');
       return true;
     } catch (err: any) {
+      this.deliveryQuote.set(null);
       this.addressStatus.set(err?.status === 503 ? 'Falha temporária na localização.' : 'Não conseguimos localizar este endereço.');
       this.formError.set(err?.status === 503 ? 'A consulta está temporariamente indisponível. Tente novamente.' : 'Não conseguimos localizar este endereço. Confira os dados e tente novamente.');
       return false;
@@ -325,17 +337,12 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
 
   formatCents(cents: number): string {
     const currency = this.menu()?.currency || this.deliveryConfig()?.currency_code || 'BRL';
-    try {
-      return new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : undefined, { style: 'currency', currency }).format(cents / 100);
-    } catch {
-      return currency === 'BRL' ? `R$ ${(cents / 100).toFixed(2).replace('.', ',')}` : `${(cents / 100).toFixed(2)} ${currency}`;
-    }
+    return formatCentsForQuote(cents, currency);
   }
 
   productImageUrl(url: string): string {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    // API returns paths like /uploads/...; prefix with apiUrl (/api) so HAProxy routes to back.
     const base = (environment.apiUrl || '').replace(/\/$/, '');
     return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
   }
@@ -631,5 +638,13 @@ export class DeliveryCheckoutComponent implements OnInit, OnDestroy {
     const name = this.displayName();
     const page = this.translate.instant('DELIVERY_CHECKOUT.PAGE_TITLE');
     this.title.setTitle(name ? `${page} — ${name}` : page);
+  }
+}
+
+function formatCentsForQuote(cents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : undefined, { style: 'currency', currency }).format(cents / 100);
+  } catch {
+    return currency === 'BRL' ? `R$ ${(cents / 100).toFixed(2).replace('.', ',')}` : `${(cents / 100).toFixed(2)} ${currency}`;
   }
 }
