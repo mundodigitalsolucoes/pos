@@ -21,6 +21,7 @@ from .delivery_order_service import (
     tenant_delivery_fee_cents,
     validate_delivery_coverage,
 )
+from .delivery_zones import distance_from_coordinates, select_coverage
 from .rate_limits import public_menu_ip_limit
 from .public_tenant_menu import _is_available_today, _tenant_today
 from .settings import settings
@@ -55,8 +56,7 @@ def _public_product_snapshot(session: Session, tenant: models.Tenant, public_pro
             raise HTTPException(status_code=400, detail=f"Produto indisponível: {public_product_id}")
         catalog = session.get(models.ProductCatalog, tp.catalog_id)
         return {"canonical_product_id": tp.product_id, "price_cents": tp.price_cents,
-                "name": tp.name,
-                "category": catalog.category if catalog else None}
+                "name": tp.name, "category": catalog.category if catalog else None}
 
     product = session.get(models.Product, public_product_id)
     if product is None or product.tenant_id != tenant.id:
@@ -64,71 +64,34 @@ def _public_product_snapshot(session: Session, tenant: models.Tenant, public_pro
     if not _is_available_today(product.available_from, product.available_until, today):
         raise HTTPException(status_code=400, detail=f"Produto indisponível: {public_product_id}")
     return {"canonical_product_id": product.id, "price_cents": product.price_cents,
-            "name": product.name,
-            "category": product.category}
+            "name": product.name, "category": product.category}
 
 
 def _combo_snapshot(session: Session, tenant_id: int, product_id: int) -> list[dict]:
     """Return the current active combo composition for a product, ready to persist on the order item."""
-    rows = session.execute(
-        text(
-            """
-            SELECT i.component_product_id AS product_id,
-                   i.quantity,
-                   p.name
+    rows = session.execute(text("""
+            SELECT i.component_product_id AS product_id, i.quantity, p.name
             FROM catalog_combo c
-            JOIN catalog_combo_item i
-              ON i.combo_id = c.id
-             AND i.tenant_id = c.tenant_id
-            JOIN product p
-              ON p.id = i.component_product_id
-             AND p.tenant_id = i.tenant_id
-            WHERE c.tenant_id = :tenant_id
-              AND c.product_id = :product_id
-              AND c.is_active = TRUE
+            JOIN catalog_combo_item i ON i.combo_id = c.id AND i.tenant_id = c.tenant_id
+            JOIN product p ON p.id = i.component_product_id AND p.tenant_id = i.tenant_id
+            WHERE c.tenant_id = :tenant_id AND c.product_id = :product_id AND c.is_active = TRUE
             ORDER BY i.sort_order, i.id
-            """
-        ),
-        {"tenant_id": tenant_id, "product_id": product_id},
-    ).mappings().all()
-    return [
-        {
-            "product_id": int(row["product_id"]),
-            "quantity": int(row["quantity"]),
-            "name": row["name"],
-        }
-        for row in rows
-    ]
+            """), {"tenant_id": tenant_id, "product_id": product_id}).mappings().all()
+    return [{"product_id": int(row["product_id"]), "quantity": int(row["quantity"]), "name": row["name"]} for row in rows]
 
 
-def _apply_modifier_snapshots(
-    session: Session,
-    *,
-    order: models.Order,
-    prepared_lines: list[dict],
-) -> None:
-    order_items = session.exec(
-        select(models.OrderItem)
-        .where(models.OrderItem.order_id == order.id)
-        .order_by(models.OrderItem.id)
-    ).all()
+def _apply_modifier_snapshots(session: Session, *, order: models.Order, prepared_lines: list[dict]) -> None:
+    order_items = session.exec(select(models.OrderItem).where(models.OrderItem.order_id == order.id).order_by(models.OrderItem.id)).all()
     if len(order_items) != len(prepared_lines):
         raise HTTPException(status_code=500, detail="Não foi possível consolidar os complementos do pedido.")
-
-    eligible = promo_svc.eligible_promos(session, tenant_id=order.tenant_id,
-                                         channel=models.OrderChannel.satisfecho_delivery.value)
+    eligible = promo_svc.eligible_promos(session, tenant_id=order.tenant_id, channel=models.OrderChannel.satisfecho_delivery.value)
     for order_item, prepared in zip(order_items, prepared_lines, strict=True):
         order_item.product_name = prepared["name"]
         modifier = prepared["modifier"]
         delta = int(modifier["price_delta_cents"] or 0)
-        applied = promo_svc.resolve_line_price(
-            session, tenant_id=order.tenant_id, list_price_cents=prepared["price_cents"],
-            product_category=prepared["category"],
-            channel=models.OrderChannel.satisfecho_delivery.value, eligible=eligible,
-        )
+        applied = promo_svc.resolve_line_price(session, tenant_id=order.tenant_id, list_price_cents=prepared["price_cents"], product_category=prepared["category"], channel=models.OrderChannel.satisfecho_delivery.value, eligible=eligible)
         order_item.price_cents = applied["price_cents"] + delta
-        order_item.list_price_cents = (applied["list_price_cents"] + delta
-                                       if applied["list_price_cents"] is not None else None)
+        order_item.list_price_cents = applied["list_price_cents"] + delta if applied["list_price_cents"] is not None else None
         order_item.discount_cents = applied["discount_cents"]
         order_item.promo_id = applied["promo_id"]
         order_item.promo_snapshot = applied["promo_snapshot"]
@@ -136,43 +99,26 @@ def _apply_modifier_snapshots(
         if rate > 0:
             total_incl = int(order_item.price_cents) * int(order_item.quantity)
             order_item.tax_amount_cents = round(total_incl * rate / (100 + rate))
-
-        combo = _combo_snapshot(
-            session,
-            order.tenant_id,
-            int(prepared["canonical_product_id"] or order_item.product_id),
-        )
+        combo = _combo_snapshot(session, order.tenant_id, int(prepared["canonical_product_id"] or order_item.product_id))
         answers: dict = {}
         summary_parts: list[str] = []
-
         if combo:
             answers["catalog_combo"] = combo
-            summary_parts.append(
-                "Combo: " + ", ".join(f'{item["quantity"]}× {item["name"]}' for item in combo)
-            )
-
+            summary_parts.append("Combo: " + ", ".join(f'{item["quantity"]}× {item["name"]}' for item in combo))
         if modifier["groups"]:
             answers["catalog_modifier_option_ids"] = prepared["selected_option_ids"]
             answers["catalog_modifiers"] = modifier["groups"]
             if modifier["summary"]:
                 summary_parts.append(str(modifier["summary"]))
-
         if answers:
             order_item.customization_answers = answers
         if summary_parts:
             order_item.customization_summary = " · ".join(summary_parts)
         session.add(order_item)
-
     session.commit()
 
 
-def create_public_catalog_checkout_impl(
-    request: Request,
-    response: Response,
-    tenant_id: int,
-    body: models.PublicSatisfechoDeliveryOrderCreate,
-    session: Session = Depends(get_session),
-) -> dict:
+def create_public_catalog_checkout_impl(request: Request, response: Response, tenant_id: int, body: models.PublicSatisfechoDeliveryOrderCreate, session: Session = Depends(get_session)) -> dict:
     """Create public delivery order with reusable catalog modifiers priced server-side."""
     tenant = session.get(models.Tenant, tenant_id)
     if not tenant:
@@ -183,14 +129,12 @@ def create_public_catalog_checkout_impl(
     address = (body.delivery_address or "").strip()
     if not address:
         raise HTTPException(status_code=400, detail="delivery_address is required")
-    structured = {
-        "postal_code": body.postal_code, "street": body.delivery_street,
-        "number": body.delivery_number, "complement": body.delivery_complement,
-        "neighborhood": body.delivery_neighborhood, "city": body.delivery_city,
-        "state_code": body.delivery_state_code,
-    }
+    structured = {"postal_code": body.postal_code, "street": body.delivery_street, "number": body.delivery_number, "complement": body.delivery_complement, "neighborhood": body.delivery_neighborhood, "city": body.delivery_city, "state_code": body.delivery_state_code}
     brazilian = tenant.country_code == "BR" or (not tenant.country_code and tenant.currency_code in (None, "BRL"))
-    if body.delivery_street or (brazilian and (tenant.delivery_radius_meters or 0) > 0):
+    zones = list(session.exec(select(models.DeliveryZone).where(models.DeliveryZone.tenant_id == tenant_id, models.DeliveryZone.is_active == True)).all())  # noqa: E712
+    distance_zones_enabled = bool(zones)
+    coverage_requires_coordinates = distance_zones_enabled or (tenant.delivery_radius_meters or 0) > 0
+    if body.delivery_street or (brazilian and coverage_requires_coordinates):
         try:
             address = br_address.full_address(structured)
             if brazilian:
@@ -213,32 +157,34 @@ def create_public_catalog_checkout_impl(
     if allowed_postal and normalize_postal_code(body.postal_code) not in allowed_postal:
         raise HTTPException(status_code=400, detail="Address is outside the delivery zone")
 
-    # Browser coordinates are advisory only. Resolve the actual delivery address here.
     delivery_latitude = body.delivery_latitude
     delivery_longitude = body.delivery_longitude
-    if brazilian and (tenant.delivery_radius_meters or 0) > 0 and tenant.latitude is not None and tenant.longitude is not None:
+    if brazilian and coverage_requires_coordinates and tenant.latitude is not None and tenant.longitude is not None:
         try:
             delivery_latitude, delivery_longitude = br_address.geocode(structured)
         except br_address.AddressError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except br_address.AddressUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-    coverage_err = validate_delivery_coverage(
-        tenant,
-        postal_code=body.postal_code,
-        delivery_latitude=delivery_latitude,
-        delivery_longitude=delivery_longitude,
-    )
-    coverage_messages = {
-        "postal_code_required": "postal_code is required for delivery",
-        "outside_delivery_zone": "Address is outside the delivery zone",
-        "delivery_location_required": "Delivery location is required to check delivery radius",
-        "delivery_location_invalid": "Invalid delivery location",
-        "outside_delivery_radius": "Address is outside the delivery radius",
-        "restaurant_location_required": "Restaurant location is required to check delivery radius",
-    }
-    if coverage_err:
-        raise HTTPException(status_code=400, detail=coverage_messages.get(coverage_err, str(coverage_err)))
+
+    coverage = None
+    if distance_zones_enabled:
+        if tenant.latitude is None or tenant.longitude is None:
+            raise HTTPException(status_code=400, detail="Restaurant location is required to check delivery zones")
+        if delivery_latitude is None or delivery_longitude is None:
+            raise HTTPException(status_code=400, detail="Delivery location is required to check delivery zones")
+        try:
+            distance_meters = distance_from_coordinates(tenant, delivery_latitude, delivery_longitude)
+            coverage = select_coverage(tenant, distance_meters, zones, postal_code=body.postal_code)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Invalid delivery location") from exc
+        if not coverage.covered:
+            raise HTTPException(status_code=400, detail="Address is outside the delivery zone")
+    else:
+        coverage_err = validate_delivery_coverage(tenant, postal_code=body.postal_code, delivery_latitude=delivery_latitude, delivery_longitude=delivery_longitude)
+        coverage_messages = {"postal_code_required": "postal_code is required for delivery", "outside_delivery_zone": "Address is outside the delivery zone", "delivery_location_required": "Delivery location is required to check delivery radius", "delivery_location_invalid": "Invalid delivery location", "outside_delivery_radius": "Address is outside the delivery radius", "restaurant_location_required": "Restaurant location is required to check delivery radius"}
+        if coverage_err:
+            raise HTTPException(status_code=400, detail=coverage_messages.get(coverage_err, str(coverage_err)))
 
     prepared_lines: list[dict] = []
     service_lines: list[dict] = []
@@ -252,51 +198,17 @@ def create_public_catalog_checkout_impl(
         if canonical_product_id is None and selected_ids:
             raise HTTPException(status_code=400, detail="Este item não possui complementos disponíveis.")
         try:
-            modifier = validate_and_price_catalog_modifiers(
-                session,
-                tenant_id=tenant_id,
-                product_id=canonical_product_id,
-                selected_option_ids=selected_ids,
-            ) if canonical_product_id is not None else {"price_delta_cents": 0, "groups": [], "summary": None}
+            modifier = validate_and_price_catalog_modifiers(session, tenant_id=tenant_id, product_id=canonical_product_id, selected_option_ids=selected_ids) if canonical_product_id is not None else {"price_delta_cents": 0, "groups": [], "summary": None}
         except CatalogModifierValidationError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        prepared_lines.append({"canonical_product_id": canonical_product_id, "price_cents": product_snapshot["price_cents"], "name": product_snapshot["name"], "category": product_snapshot["category"], "selected_option_ids": selected_ids, "modifier": modifier})
+        service_lines.append({"product_id": public_product_id, "quantity": item.quantity, "notes": item.notes})
 
-        prepared_lines.append(
-            {
-                "canonical_product_id": canonical_product_id,
-                "price_cents": product_snapshot["price_cents"],
-                "name": product_snapshot["name"],
-                "category": product_snapshot["category"],
-                "selected_option_ids": selected_ids,
-                "modifier": modifier,
-            }
-        )
-        service_lines.append(
-            {
-                "product_id": public_product_id,
-                "quantity": item.quantity,
-                "notes": item.notes,
-            }
-        )
-
-    fee = tenant_delivery_fee_cents(tenant)
-    order, outcome = create_satisfecho_delivery_order(
-        session,
-        tenant_id=tenant_id,
-        lines=service_lines,
-        delivery_address=address,
-        customer_phone=phone,
-        customer_name=body.customer_name,
-        notes=body.notes,
-        courier_user_id=None,
-        notify_kitchen=False,
-        delivery_fee_cents=fee,
-        commit_order=False,
-    )
+    fee = coverage.fee_cents if coverage is not None else tenant_delivery_fee_cents(tenant)
+    order, outcome = create_satisfecho_delivery_order(session, tenant_id=tenant_id, lines=service_lines, delivery_address=address, customer_phone=phone, customer_name=body.customer_name, notes=body.notes, courier_user_id=None, notify_kitchen=False, delivery_fee_cents=fee, commit_order=False)
     if not order:
         detail = outcome.get("detail", "create_failed")
         raise HTTPException(status_code=400, detail=str(detail))
-
     try:
         _apply_modifier_snapshots(session, order=order, prepared_lines=prepared_lines)
     except Exception:
@@ -304,47 +216,17 @@ def create_public_catalog_checkout_impl(
         raise
     session.refresh(order)
 
-    items = session.exec(
-        select(models.OrderItem).where(models.OrderItem.order_id == order.id)
-    ).all()
+    items = session.exec(select(models.OrderItem).where(models.OrderItem.order_id == order.id)).all()
     subtotal_cents = sum((item.price_cents or 0) * item.quantity for item in items)
     delivery_fee = order_delivery_fee_cents(order)
     total_cents = subtotal_cents + delivery_fee
-    revolut_configured = bool(
-        (tenant.revolut_merchant_secret and tenant.revolut_merchant_secret.strip())
-        or (settings.revolut_merchant_secret and settings.revolut_merchant_secret.strip())
-    )
+    revolut_configured = bool((tenant.revolut_merchant_secret and tenant.revolut_merchant_secret.strip()) or (settings.revolut_merchant_secret and settings.revolut_merchant_secret.strip()))
     stripe_key = tenant.stripe_publishable_key or settings.stripe_publishable_key or None
-
-    # Import at request time to avoid a module-import cycle with main.py.
     from .main import _sign_public_delivery_order_token
-
-    return {
-        "id": order.id,
-        "status": order.status.value,
-        "order_channel": order.order_channel.value if hasattr(order.order_channel, "value") else str(order.order_channel),
-        "delivery_address": order.delivery_address,
-        "customer_phone": order.customer_phone,
-        "customer_name": order.customer_name,
-        "notes": order.notes,
-        "table_id": order.table_id,
-        "subtotal_cents": subtotal_cents,
-        "delivery_fee_cents": delivery_fee,
-        "total_cents": total_cents,
-        "public_order_token": _sign_public_delivery_order_token(order.id, tenant_id),
-        "stripe_publishable_key": stripe_key,
-        "revolut_configured": revolut_configured,
-        "created_at": order.created_at.isoformat() if order.created_at else None,
-    }
+    return {"id": order.id, "status": order.status.value, "order_channel": order.order_channel.value if hasattr(order.order_channel, "value") else str(order.order_channel), "delivery_address": order.delivery_address, "customer_phone": order.customer_phone, "customer_name": order.customer_name, "notes": order.notes, "table_id": order.table_id, "subtotal_cents": subtotal_cents, "delivery_fee_cents": delivery_fee, "delivery_zone_id": coverage.zone_id if coverage is not None else None, "delivery_distance_meters": round(coverage.distance_meters) if coverage is not None else None, "delivery_estimated_minutes": coverage.estimated_minutes if coverage is not None else None, "delivery_pricing_source": coverage.source if coverage is not None else "legacy", "total_cents": total_cents, "public_order_token": _sign_public_delivery_order_token(order.id, tenant_id), "stripe_publishable_key": stripe_key, "revolut_configured": revolut_configured, "created_at": order.created_at.isoformat() if order.created_at else None}
 
 
 @router.post("/public/catalog-checkout/{tenant_id}")
 @public_menu_ip_limit()
-def create_public_catalog_checkout(
-    request: Request,
-    response: Response,
-    tenant_id: int,
-    body: models.PublicSatisfechoDeliveryOrderCreate,
-    session: Session = Depends(get_session),
-) -> dict:
+def create_public_catalog_checkout(request: Request, response: Response, tenant_id: int, body: models.PublicSatisfechoDeliveryOrderCreate, session: Session = Depends(get_session)) -> dict:
     return create_public_catalog_checkout_impl(request, response, tenant_id, body, session)
