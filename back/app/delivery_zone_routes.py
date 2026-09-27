@@ -10,12 +10,14 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+from . import br_address_service as br_address
 from . import models
 from .db import get_session
-from .delivery_zones import overlapping
+from .delivery_zones import distance_from_coordinates, overlapping, select_coverage
 from .permissions import Permission, require_permission
 
 router = APIRouter(prefix="/tenant/delivery-zones", tags=["Delivery zones"])
+public_router = APIRouter(prefix="/public/tenants", tags=["Public delivery coverage"])
 
 
 class ZoneCreate(BaseModel):
@@ -44,6 +46,16 @@ class ZoneUpdate(BaseModel):
     estimated_minutes: int | None = Field(default=None, gt=0)
     is_active: bool | None = None
     sort_order: int | None = None
+
+
+class PublicDeliveryAddress(BaseModel):
+    postal_code: str
+    street: str
+    number: str
+    complement: str = ""
+    neighborhood: str
+    city: str
+    state_code: str
 
 
 def _lock_tenant(session: Session, tenant_id: int) -> None:
@@ -134,3 +146,61 @@ def delete_zone(
     _lock_tenant(session, user.tenant_id)
     session.delete(_get_zone(session, user.tenant_id, zone_id))
     session.commit()
+
+
+@public_router.post("/{tenant_id}/delivery-address/coverage")
+def quote_delivery_address(
+    tenant_id: int,
+    body: PublicDeliveryAddress,
+    session: Session = Depends(get_session),
+) -> dict:
+    """Validate a Brazilian address and quote delivery coverage server-side."""
+    tenant = session.get(models.Tenant, tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Restaurante não encontrado.")
+    data = body.model_dump()
+    try:
+        br_address.full_address(data)
+        br_address.verify_cep(data)
+    except br_address.AddressError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except br_address.AddressUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    zones = list(session.exec(select(models.DeliveryZone).where(
+        models.DeliveryZone.tenant_id == tenant_id,
+        models.DeliveryZone.is_active == True,  # noqa: E712
+    )).all())
+    requires_coordinates = bool(zones) or (tenant.delivery_radius_meters or 0) > 0
+    if requires_coordinates and (tenant.latitude is None or tenant.longitude is None):
+        return {"covered": False, "reason": "restaurant_location_required", "latitude": None,
+                "longitude": None, "distance_meters": None, "delivery_fee_cents": None,
+                "estimated_minutes": None, "zone_id": None, "pricing_source": None}
+
+    latitude = longitude = None
+    distance_meters = 0.0
+    if requires_coordinates:
+        try:
+            latitude, longitude = br_address.geocode(data)
+            distance_meters = distance_from_coordinates(tenant, latitude, longitude)
+        except br_address.AddressError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except br_address.AddressUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Localização de entrega inválida.") from exc
+
+    coverage = select_coverage(
+        tenant, distance_meters, zones, postal_code=body.postal_code,
+    )
+    return {
+        "covered": coverage.covered,
+        "reason": None if coverage.covered else "outside_delivery_zone",
+        "latitude": latitude,
+        "longitude": longitude,
+        "distance_meters": round(coverage.distance_meters) if requires_coordinates else None,
+        "delivery_fee_cents": coverage.fee_cents,
+        "estimated_minutes": coverage.estimated_minutes,
+        "zone_id": coverage.zone_id,
+        "pricing_source": coverage.source,
+    }
