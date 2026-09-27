@@ -17,7 +17,6 @@ from .delivery_zones import distance_from_coordinates, overlapping, select_cover
 from .permissions import Permission, require_permission
 
 router = APIRouter(prefix="/tenant/delivery-zones", tags=["Delivery zones"])
-public_router = APIRouter(prefix="/public/tenants", tags=["Public delivery coverage"])
 
 
 class ZoneCreate(BaseModel):
@@ -148,7 +147,7 @@ def delete_zone(
     session.commit()
 
 
-@public_router.post("/{tenant_id}/delivery-address/coverage")
+@router.post("/quote/{tenant_id}")
 def quote_delivery_address(
     tenant_id: int,
     body: PublicDeliveryAddress,
