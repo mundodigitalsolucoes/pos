@@ -12,6 +12,18 @@ export interface BrazilianAddress {
   state_code: string;
 }
 
+export interface DeliveryCoverageQuote {
+  covered: boolean;
+  reason: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distance_meters: number | null;
+  delivery_fee_cents: number | null;
+  estimated_minutes: number | null;
+  zone_id: number | null;
+  pricing_source: string | null;
+}
+
 export const emptyBrazilianAddress = (): BrazilianAddress => ({
   postal_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state_code: '',
 });
@@ -41,8 +53,8 @@ export class BrazilianAddressService {
       `${this.base}/public/address/cep/${cepDigits(cep)}`);
   }
   checkCoverage(tenantId: number, address: BrazilianAddress) {
-    return this.http.post<{ covered: boolean; reason: string|null; latitude: number|null; longitude: number|null }>(
-      `${this.base}/public/tenants/${tenantId}/delivery-address/coverage`,
+    return this.http.post<DeliveryCoverageQuote>(
+      `${this.base}/tenant/delivery-zones/quote/${tenantId}`,
       { ...address, postal_code: cepDigits(address.postal_code) });
   }
 }
